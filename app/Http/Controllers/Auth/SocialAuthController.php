@@ -6,9 +6,12 @@ use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Models\SocialAccount;
 use App\Models\User;
+use App\Support\AuthenticatedUserRedirect;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
@@ -62,11 +65,21 @@ class SocialAuthController extends Controller
                 );
             });
 
+            /*
+             * Authenticate the resolved LMS account.
+             */
             Auth::login($user, remember: true);
 
             request()->session()->regenerate();
 
-            return redirect()->intended('/');
+            /*
+             * All authenticated users now use the same destination rules:
+             *
+             * Admin → /dashboard
+             * Student without onboarding → /onboarding
+             * Completed Student → /dashboard
+             */
+            return AuthenticatedUserRedirect::to($user);
         } catch (Throwable $exception) {
             report($exception);
 
@@ -89,9 +102,9 @@ class SocialAuthController extends Controller
         $providerEmail = $socialiteUser->getEmail();
 
         /*
-         * An authenticated OAuth provider has supplied the identity used
-         * to authenticate this login. When an email address is supplied,
-         * treat that provider email as verified in the LMS.
+         * An OAuth provider has authenticated this identity.
+         *
+         * When a valid email is supplied, treat it as verified.
          */
         $providerEmailIsVerified = $providerEmail !== null
             && filter_var($providerEmail, FILTER_VALIDATE_EMAIL) !== false;
@@ -110,6 +123,11 @@ class SocialAuthController extends Controller
             $this->updateSocialAccount(
                 $socialAccount,
                 $socialiteUser
+            );
+
+            $this->syncProviderAvatar(
+                $user,
+                $socialiteUser->getAvatar()
             );
 
             $user->forceFill([
@@ -132,10 +150,6 @@ class SocialAuthController extends Controller
         /*
          * If the provider supplied an email address, first look for an
          * existing LMS account using that email.
-         *
-         * A provider-authenticated email is treated as verified here,
-         * so an existing unverified LMS account becomes verified when
-         * the user successfully authenticates through Google or GitHub.
          */
         $user = null;
 
@@ -170,9 +184,7 @@ class SocialAuthController extends Controller
             ]);
         } else {
             /*
-             * The existing account has now authenticated through the
-             * external provider, so its provider email is considered
-             * verified by the LMS.
+             * Existing LMS account authenticated through OAuth.
              */
             $user->forceFill([
                 'last_login_at' => now(),
@@ -183,12 +195,20 @@ class SocialAuthController extends Controller
         }
 
         /*
-         * Link the provider identity to the LMS account.
+         * Save the provider identity.
          */
-        $this->createSocialAccount(
+        $socialAccount = $this->createSocialAccount(
             $user,
             $provider,
             $socialiteUser
+        );
+
+        /*
+         * Download the provider avatar to our own server.
+         */
+        $this->syncProviderAvatar(
+            $user,
+            $socialiteUser->getAvatar()
         );
 
         return $user;
@@ -225,5 +245,85 @@ class SocialAuthController extends Controller
                 ?: $socialiteUser->getNickname(),
             'provider_avatar_url' => $socialiteUser->getAvatar(),
         ])->save();
+    }
+
+    /**
+     * Download and persist a provider avatar locally.
+     */
+    protected function syncProviderAvatar(
+        User $user,
+        ?string $avatarUrl
+    ): void {
+        if (! $avatarUrl || ! filter_var($avatarUrl, FILTER_VALIDATE_URL)) {
+            return;
+        }
+
+        try {
+            $disk = Storage::disk('public');
+
+            /*
+             * If the current provider avatar is already stored locally,
+             * don't download it again unless we have a reason to refresh it.
+             */
+            if ($user->avatar_path && $disk->exists($user->avatar_path)) {
+                return;
+            }
+
+            $response = Http::timeout(10)
+                ->connectTimeout(5)
+                ->accept('image/*')
+                ->get($avatarUrl);
+
+            if (! $response->successful()) {
+                return;
+            }
+
+            $contentType = strtolower(
+                (string) $response->header('Content-Type')
+            );
+
+            if (! str_starts_with($contentType, 'image/')) {
+                return;
+            }
+
+            $extension = match (true) {
+                str_contains($contentType, 'png') => 'png',
+                str_contains($contentType, 'webp') => 'webp',
+                str_contains($contentType, 'gif') => 'gif',
+                default => 'jpg',
+            };
+
+            $path = 'avatars/users/'
+                . $user->id
+                . '-'
+                . Str::uuid()
+                . '.'
+                . $extension;
+
+            $disk->put(
+                $path,
+                $response->body()
+            );
+
+            /*
+             * Remove the previous local avatar after the new one
+             * has successfully been stored.
+             */
+            if (
+                $user->avatar_path
+                && $disk->exists($user->avatar_path)
+            ) {
+                $disk->delete($user->avatar_path);
+            }
+
+            $user->forceFill([
+                'avatar_path' => $path,
+            ])->save();
+        } catch (Throwable $exception) {
+            /*
+             * Avatar download failure must never prevent authentication.
+             */
+            report($exception);
+        }
     }
 }

@@ -1,5 +1,6 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEvent, useState } from 'react';
+import { Passkeys } from '@laravel/passkeys';
+import { FormEvent, useEffect, useState } from 'react';
 
 interface LoginProps {
     canResetPassword?: boolean;
@@ -9,7 +10,13 @@ interface LoginProps {
 
 function MailIcon() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-5 w-5"
+        >
             <rect x="3" y="5" width="18" height="14" rx="2" />
             <path d="m3 7 9 6 9-6" />
         </svg>
@@ -18,21 +25,55 @@ function MailIcon() {
 
 function LockIcon() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-5 w-5"
+        >
             <rect x="4" y="10" width="16" height="11" rx="2" />
             <path d="M8 10V7a4 4 0 0 1 8 0v3" />
         </svg>
     );
 }
 
+function PasskeyIcon() {
+    return (
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-5 w-5"
+            aria-hidden="true"
+        >
+            <path d="M7 14a4 4 0 1 1 3.87-5H21v4h-2v2h-3v-2h-5.13A4 4 0 0 1 7 14Z" />
+            <circle cx="7" cy="10" r="1" />
+        </svg>
+    );
+}
+
 function EyeIcon({ open }: { open: boolean }) {
     return open ? (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-5 w-5"
+        >
             <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
             <circle cx="12" cy="12" r="2.5" />
         </svg>
     ) : (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-5 w-5"
+        >
             <path d="M3 3l18 18" />
             <path d="M10.6 6.2A9.7 9.7 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3.1 3.7" />
             <path d="M6.2 6.7C3.8 8.2 2.5 12 2.5 12s3.5 6 9.5 6c1.2 0 2.3-.2 3.3-.6" />
@@ -43,7 +84,13 @@ function EyeIcon({ open }: { open: boolean }) {
 
 function ArrowIcon() {
     return (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+        <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-5 w-5"
+        >
             <path d="M10 17l5-5-5-5" />
             <path d="M15 12H3" />
         </svg>
@@ -52,7 +99,11 @@ function ArrowIcon() {
 
 function GoogleIcon() {
     return (
-        <svg viewBox="0 0 24 24" className="h-5 w-5">
+        <svg
+            viewBox="0 0 24 24"
+            className="h-5 w-5"
+            aria-hidden="true"
+        >
             <path
                 fill="#4285F4"
                 d="M21.35 12.27c0-.68-.06-1.35-.17-1.99H12v3.77h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.17Z"
@@ -75,7 +126,12 @@ function GoogleIcon() {
 
 function GithubIcon() {
     return (
-        <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+        <svg
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="h-5 w-5"
+            aria-hidden="true"
+        >
             <path d="M12 .5A11.5 11.5 0 0 0 8.36 22.9c.58.1.79-.25.79-.56v-2.16c-3.2.7-3.87-1.54-3.87-1.54-.53-1.36-1.3-1.72-1.3-1.72-1.04-.72.08-.7.08-.7 1.15.08 1.75 1.18 1.75 1.18 1.02 1.75 2.67 1.25 3.32.95.1-.74.4-1.25.73-1.54-2.55-.29-5.23-1.28-5.23-5.7 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.47.11-3.06 0 0 .96-.31 3.15 1.18a10.9 10.9 0 0 1 5.73 0c2.19-1.49 3.15-1.18 3.15-1.18.62 1.59.23 2.77.11 3.06.73.81 1.18 1.84 1.18 3.1 0 4.43-2.69 5.4-5.25 5.69.41.35.78 1.04.78 2.1v3.1c0 .31.21.67.8.56A11.5 11.5 0 0 0 12 .5Z" />
         </svg>
     );
@@ -87,6 +143,10 @@ export default function Login({
     status,
 }: LoginProps) {
     const [showPassword, setShowPassword] = useState(false);
+    const [passkeyProcessing, setPasskeyProcessing] =
+        useState(false);
+    const [passkeyError, setPasskeyError] =
+        useState<string | null>(null);
 
     const form = useForm({
         email: '',
@@ -97,9 +157,101 @@ export default function Login({
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
+        setPasskeyError(null);
+
         form.post('/login', {
             onFinish: () => form.reset('password'),
         });
+    };
+
+    useEffect(() => {
+        if (
+            typeof window === 'undefined' ||
+            !window.PublicKeyCredential ||
+            !navigator.credentials
+        ) {
+            return;
+        }
+
+        let cancelled = false;
+
+        const enablePasskeyAutofill = async () => {
+            try {
+                await Passkeys.autofill();
+            } catch (error) {
+                if (!cancelled) {
+                    console.debug('Passkey autofill unavailable.', error);
+                }
+            }
+        };
+
+        void enablePasskeyAutofill();
+
+        return () => {
+            cancelled = true;
+            Passkeys.cancel();
+        };
+    }, []);
+
+    const loginWithPasskey = async () => {
+        setPasskeyProcessing(true);
+        setPasskeyError(null);
+
+        try {
+            if (
+                !window.PublicKeyCredential ||
+                !navigator.credentials
+            ) {
+                throw new Error(
+                    'Passkeys are not supported by this browser.',
+                );
+            }
+
+            /*
+             * Laravel's official passkey client handles:
+             *
+             * 1. Fetching /passkeys/login/options.
+             * 2. Calling the browser's WebAuthn credential picker.
+             * 3. Sending the signed assertion to /passkeys/login.
+             * 4. Establishing the authenticated Laravel session.
+             *
+             * This is a completely independent authentication path.
+             *
+             * Password login:
+             *     email + password -> email OTP -> dashboard
+             *
+             * Passkey login:
+             *     passkey -> dashboard
+             *
+             * A successful passkey login therefore does not enter
+             * the email 2FA challenge.
+             */
+            const result = await Passkeys.verify({
+                remember: () => form.data.remember,
+            });
+
+            if (
+                result &&
+                typeof result === 'object' &&
+                'redirect' in result &&
+                typeof result.redirect === 'string'
+            ) {
+                window.location.assign(result.redirect);
+                return;
+            }
+
+            window.location.assign('/dashboard');
+        } catch (error) {
+            console.error(error);
+
+            setPasskeyError(
+                error instanceof Error
+                    ? error.message
+                    : 'Unable to sign in with your passkey.',
+            );
+        } finally {
+            setPasskeyProcessing(false);
+        }
     };
 
     return (
@@ -108,7 +260,6 @@ export default function Login({
 
             <main className="min-h-screen bg-[#f5f7fa] px-4 py-10 text-[#172033] transition-colors dark:bg-[#0b1220] dark:text-[#f3f6fc] sm:py-14">
                 <div className="mx-auto flex w-full max-w-[460px] flex-col items-center">
-
                     {/* LWF Brand */}
                     <Link
                         href="/"
@@ -131,7 +282,6 @@ export default function Login({
 
                     {/* Main authentication surface */}
                     <section className="w-full rounded-[8px] border border-[#d8dee9] bg-white p-6 shadow-[0_2px_8px_rgba(23,32,51,0.08)] dark:border-[#2a3850] dark:bg-[#111827] dark:shadow-[0_2px_10px_rgba(0,0,0,0.28)] sm:p-8">
-
                         <header className="mb-7">
                             <h1 className="text-center text-[25px] font-semibold tracking-[-0.025em] text-[#172033] dark:text-white">
                                 Sign in
@@ -148,8 +298,16 @@ export default function Login({
                             </div>
                         )}
 
-                        <form onSubmit={submit} className="space-y-5">
+                        {passkeyError && (
+                            <div className="mb-5 rounded-[6px] border border-[#d13438] bg-[#fff5f5] px-3 py-2.5 text-sm text-[#b42318] dark:border-[#6f3030] dark:bg-[#2a1517] dark:text-[#ff8b8b]">
+                                {passkeyError}
+                            </div>
+                        )}
 
+                        <form
+                            onSubmit={submit}
+                            className="space-y-5"
+                        >
                             {/* Email */}
                             <div>
                                 <label
@@ -170,9 +328,12 @@ export default function Login({
                                         name="email"
                                         value={form.data.email}
                                         onChange={(event) =>
-                                            form.setData('email', event.target.value)
+                                            form.setData(
+                                                'email',
+                                                event.target.value,
+                                            )
                                         }
-                                        autoComplete="email"
+                                        autoComplete="email webauthn"
                                         autoFocus
                                         placeholder="you@example.com"
                                         className={`h-11 w-full rounded-[6px] border bg-white pl-11 pr-3 text-sm text-[#172033] outline-none transition placeholder:text-[#8794a9] dark:bg-[#0d1626] dark:text-white dark:placeholder:text-[#697891] ${
@@ -217,11 +378,18 @@ export default function Login({
 
                                     <input
                                         id="password"
-                                        type={showPassword ? 'text' : 'password'}
+                                        type={
+                                            showPassword
+                                                ? 'text'
+                                                : 'password'
+                                        }
                                         name="password"
                                         value={form.data.password}
                                         onChange={(event) =>
-                                            form.setData('password', event.target.value)
+                                            form.setData(
+                                                'password',
+                                                event.target.value,
+                                            )
                                         }
                                         autoComplete="current-password"
                                         placeholder="Enter your password"
@@ -234,11 +402,21 @@ export default function Login({
 
                                     <button
                                         type="button"
-                                        onClick={() => setShowPassword((value) => !value)}
-                                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                        onClick={() =>
+                                            setShowPassword(
+                                                (value) => !value,
+                                            )
+                                        }
+                                        aria-label={
+                                            showPassword
+                                                ? 'Hide password'
+                                                : 'Show password'
+                                        }
                                         className="absolute inset-y-0 right-3 flex items-center text-[#7b8aa3] transition hover:text-[#172033] dark:text-[#8392aa] dark:hover:text-white"
                                     >
-                                        <EyeIcon open={showPassword} />
+                                        <EyeIcon
+                                            open={showPassword}
+                                        />
                                     </button>
                                 </div>
 
@@ -255,26 +433,37 @@ export default function Login({
                                     type="checkbox"
                                     checked={form.data.remember}
                                     onChange={(event) =>
-                                        form.setData('remember', event.target.checked)
+                                        form.setData(
+                                            'remember',
+                                            event.target.checked,
+                                        )
                                     }
                                     className="h-4 w-4 rounded-[3px] border-[#b8c3d3] text-[#1554c0] accent-[#1554c0] focus:ring-[#1554c0] dark:border-[#46566f] dark:bg-[#0d1626] dark:accent-[#4c8dff]"
                                 />
+
                                 Remember me
                             </label>
 
                             {/* Primary action */}
                             <button
                                 type="submit"
-                                disabled={form.processing}
+                                disabled={
+                                    form.processing ||
+                                    passkeyProcessing
+                                }
                                 className="flex h-11 w-full items-center justify-center gap-2 rounded-[6px] bg-[#1554c0] px-4 text-sm font-semibold text-white shadow-[0_2px_5px_rgba(21,84,192,0.22)] transition hover:bg-[#1048a8] focus:outline-none focus:ring-2 focus:ring-[#1554c0]/30 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:bg-[#4c8dff] dark:text-[#07101f] dark:shadow-[0_2px_8px_rgba(76,141,255,0.22)] dark:hover:bg-[#6ba3ff] dark:focus:ring-[#4c8dff]/30 dark:focus:ring-offset-[#111827]"
                             >
-                                {form.processing ? 'Signing in...' : 'Sign in'}
+                                {form.processing
+                                    ? 'Signing in...'
+                                    : 'Sign in'}
 
-                                {!form.processing && <ArrowIcon />}
+                                {!form.processing && (
+                                    <ArrowIcon />
+                                )}
                             </button>
                         </form>
 
-                        {/* Divider */}
+                        {/* Passkey authentication */}
                         <div className="my-6 flex items-center gap-3">
                             <div className="h-px flex-1 bg-[#e1e6ee] dark:bg-[#2a3850]" />
 
@@ -285,9 +474,29 @@ export default function Login({
                             <div className="h-px flex-1 bg-[#e1e6ee] dark:bg-[#2a3850]" />
                         </div>
 
-                        {/* Social authentication */}
-                        <div className="space-y-3">
+                        <button
+                            type="button"
+                            onClick={loginWithPasskey}
+                            disabled={
+                                passkeyProcessing ||
+                                form.processing
+                            }
+                            className="flex h-11 w-full items-center justify-center gap-3 rounded-[6px] border border-[#c9d2df] bg-white px-4 text-sm font-semibold text-[#172033] transition hover:border-[#aebbd0] hover:bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-[#1554c0]/20 focus:ring-offset-2 focus:ring-offset-white disabled:cursor-not-allowed disabled:opacity-60 dark:border-[#34435a] dark:bg-[#182235] dark:text-[#edf2fa] dark:hover:border-[#4b5d78] dark:hover:bg-[#202c40] dark:focus:ring-[#4c8dff]/20 dark:focus:ring-offset-[#111827]"
+                        >
+                            <PasskeyIcon />
 
+                            {passkeyProcessing
+                                ? 'Authenticating...'
+                                : 'Sign in with passkey'}
+                        </button>
+
+                        <p className="mt-2 text-center text-xs leading-5 text-[#71809a] dark:text-[#8392aa]">
+                            Use your fingerprint, face recognition,
+                            device PIN, or security key.
+                        </p>
+
+                        {/* Social authentication */}
+                        <div className="mt-6 space-y-3">
                             <a
                                 href="/auth/google"
                                 className="flex h-11 w-full items-center justify-center gap-3 rounded-[6px] border border-[#c9d2df] bg-white px-4 text-sm font-semibold text-[#172033] transition hover:border-[#aebbd0] hover:bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-[#1554c0]/20 focus:ring-offset-2 focus:ring-offset-white dark:border-[#34435a] dark:bg-[#182235] dark:text-[#edf2fa] dark:hover:border-[#4b5d78] dark:hover:bg-[#202c40] dark:focus:ring-[#4c8dff]/20 dark:focus:ring-offset-[#111827]"
@@ -332,7 +541,9 @@ export default function Login({
 
                         <span aria-hidden="true">•</span>
 
-                        <span>© {new Date().getFullYear()}</span>
+                        <span>
+                            © {new Date().getFullYear()}
+                        </span>
 
                         <span aria-hidden="true">•</span>
 

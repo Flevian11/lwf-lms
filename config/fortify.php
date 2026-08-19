@@ -42,10 +42,6 @@ return [
     |--------------------------------------------------------------------------
     | Home Path
     |--------------------------------------------------------------------------
-    |
-    | This will be handled by our application authentication flow so that
-    | Admin and Student users can be directed to their appropriate area.
-    |
     */
 
     'home' => '/',
@@ -72,10 +68,6 @@ return [
     |--------------------------------------------------------------------------
     | Rate Limiting
     |--------------------------------------------------------------------------
-    |
-    | Login and passkey operations remain protected by Fortify's limiters.
-    | Two-factor authentication has its own independent limiter.
-    |
     */
 
     'limiters' => [
@@ -88,9 +80,6 @@ return [
     |--------------------------------------------------------------------------
     | Register View Routes
     |--------------------------------------------------------------------------
-    |
-    | We are using Inertia + React/TSX for the actual authentication UI.
-    |
     */
 
     'views' => true,
@@ -100,7 +89,7 @@ return [
     | Passkeys
     |--------------------------------------------------------------------------
     |
-    | WebAuthn/passkeys are enabled for passwordless authentication.
+    | Passkeys remain completely independent from email 2FA.
     |
     */
 
@@ -122,18 +111,12 @@ return [
     | Features
     |--------------------------------------------------------------------------
     |
-    | Authentication capabilities enabled for the LMS.
+    | IMPORTANT:
     |
-    | 2FA is OPTIONAL:
+    | Native Fortify two-factor authentication is intentionally NOT enabled.
+    | Fortify's native implementation is TOTP/authenticator-app based.
     |
-    | - User without 2FA enabled:
-    |       Email/password → authenticated session
-    |
-    | - User with 2FA enabled:
-    |       Email/password → 2FA challenge → authenticated session
-    |
-    | Fortify determines whether the second factor is required based on
-    | the user's actual two-factor configuration.
+    | Learn With Flevian uses its own email OTP implementation instead.
     |
     */
 
@@ -165,26 +148,18 @@ return [
         Features::updatePasswords(),
 
         /*
-         * Optional two-factor authentication.
+         * Native Fortify two-factor authentication is deliberately absent.
          *
-         * Users may enable 2FA from their account security settings.
-         *
-         * Once enabled, Fortify requires the second factor during
-         * authentication.
+         * Email OTP is implemented by the application.
          */
-        Features::twoFactorAuthentication([
-            'confirm' => true,
-            'confirmPassword' => true,
-        ]),
 
         /*
          * Passkey/WebAuthn authentication.
          *
-         * Users can register passkeys after authentication and use
-         * them for subsequent passwordless authentication.
+         * Passkeys are passwordless and bypass email 2FA.
          */
         Features::passkeys([
-            'confirmPassword' => true,
+            'confirmPassword' => false,
         ]),
     ],
 

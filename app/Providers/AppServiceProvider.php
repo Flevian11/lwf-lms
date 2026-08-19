@@ -6,10 +6,18 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Fortify\Contracts\LoginResponse;
+use Laravel\Fortify\Contracts\TwoFactorChallengeViewResponse;
+use Laravel\Fortify\Contracts\TwoFactorDisabledResponse;
+use Laravel\Fortify\Contracts\TwoFactorEnabledResponse;
+use Laravel\Fortify\Contracts\TwoFactorLoginResponse;
+use Laravel\Fortify\Contracts\VerifyEmailResponse;
+use Laravel\Fortify\Contracts\VerifyEmailViewResponse;
 use Laravel\Head\Enums\OgType;
 use Laravel\Head\Enums\TwitterCard;
 use Laravel\Head\Facades\Head;
 use Laravel\Head\HeadBuilder;
+use Laravel\Passkeys\Contracts\PasskeyLoginResponse;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -18,7 +26,69 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        /*
+         * --------------------------------------------------------------------------
+         * Authentication Response Bindings
+         * --------------------------------------------------------------------------
+         *
+         * Normal login:
+         *     App\Http\Responses\LoginResponse
+         *
+         * Email verification:
+         *     App\Http\Responses\VerifyEmailResponse
+         *
+         * Email verification notice:
+         *     App\Http\Responses\VerifyEmailViewResponse
+         *
+         * Passkey login:
+         *     App\Http\Responses\PasskeyLoginResponse
+         *
+         * Two-factor authentication:
+         *     App\Http\Responses\TwoFactorChallengeViewResponse
+         *     App\Http\Responses\TwoFactorLoginResponse
+         *     App\Http\Responses\TwoFactorEnabledResponse
+         *     App\Http\Responses\TwoFactorDisabledResponse
+         */
+
+        $this->app->singleton(
+            LoginResponse::class,
+            \App\Http\Responses\LoginResponse::class
+        );
+
+        $this->app->singleton(
+            VerifyEmailResponse::class,
+            \App\Http\Responses\VerifyEmailResponse::class
+        );
+
+        $this->app->singleton(
+            VerifyEmailViewResponse::class,
+            \App\Http\Responses\VerifyEmailViewResponse::class
+        );
+
+        $this->app->singleton(
+            PasskeyLoginResponse::class,
+            \App\Http\Responses\PasskeyLoginResponse::class
+        );
+
+        $this->app->singleton(
+            TwoFactorChallengeViewResponse::class,
+            \App\Http\Responses\TwoFactorChallengeViewResponse::class
+        );
+
+        $this->app->singleton(
+            TwoFactorLoginResponse::class,
+            \App\Http\Responses\TwoFactorLoginResponse::class
+        );
+
+        $this->app->singleton(
+            TwoFactorEnabledResponse::class,
+            \App\Http\Responses\TwoFactorEnabledResponse::class
+        );
+
+        $this->app->singleton(
+            TwoFactorDisabledResponse::class,
+            \App\Http\Responses\TwoFactorDisabledResponse::class
+        );
     }
 
     /**
@@ -30,50 +100,49 @@ class AppServiceProvider extends ServiceProvider
          * --------------------------------------------------------------------------
          * Authentication Rate Limiting
          * --------------------------------------------------------------------------
-         *
-         * Limit login attempts by both email address and IP address.
-         *
-         * This works together with:
-         *
-         * 'limiters' => [
-         *     'login' => 'login',
-         * ],
-         *
-         * in config/fortify.php.
          */
+
         RateLimiter::for('login', function (Request $request): Limit {
             $email = mb_strtolower(
                 trim((string) $request->input('email'))
             );
 
             return Limit::perMinute(5)
-                ->by($email.'|'.$request->ip());
+                ->by($email . '|' . $request->ip());
         });
 
         /*
-         * Two-factor authentication rate limiting.
-         *
-         * Keep this separate from the normal login limiter.
+         * --------------------------------------------------------------------------
+         * Two-Factor Authentication Rate Limiting
+         * --------------------------------------------------------------------------
          */
+
         RateLimiter::for('two-factor', function (Request $request): Limit {
             return Limit::perMinute(5)
-                ->by((string) $request->session()->get('login.id').'|'.$request->ip());
+                ->by(
+                    (string) $request->session()->get('login.id')
+                    . '|'
+                    . $request->ip()
+                );
         });
 
         /*
-         * Passkey authentication rate limiting.
+         * --------------------------------------------------------------------------
+         * Passkey Authentication Rate Limiting
+         * --------------------------------------------------------------------------
          */
+
         RateLimiter::for('passkeys', function (Request $request): Limit {
             return Limit::perMinute(6)
                 ->by($request->ip());
         });
 
         /*
-         * Global SEO defaults.
-         *
-         * Page-specific metadata can override these values later
-         * without having to duplicate the global configuration.
+         * --------------------------------------------------------------------------
+         * Global SEO Defaults
+         * --------------------------------------------------------------------------
          */
+
         Head::defaults(function (HeadBuilder $head): void {
             $head
                 ->title(
@@ -97,11 +166,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         /*
-         * Stable browser / PWA metadata.
-         *
-         * These are intentionally registered as Inertia globals because
-         * they should not be replaced during normal Inertia navigation.
+         * --------------------------------------------------------------------------
+         * Stable Browser / PWA Metadata
+         * --------------------------------------------------------------------------
          */
+
         Head::inertiaGlobals(function (HeadBuilder $head): void {
             $head
                 ->viewport(
@@ -118,8 +187,13 @@ class AppServiceProvider extends ServiceProvider
         });
 
         /*
+         * --------------------------------------------------------------------------
+         * Error Pages
+         * --------------------------------------------------------------------------
+         *
          * Error pages should never be indexed.
          */
+
         Head::errors(function ($errors): void {
             $errors->defaults(
                 robots: 'noindex, follow'
@@ -146,7 +220,7 @@ class AppServiceProvider extends ServiceProvider
             $errors->status(
                 429,
                 title: 'Too Many Requests',
-                description: 'Too many requests were received. Please try again later.'
+                description: 'Too many requests were received. Please try again.'
             );
 
             $errors->status(

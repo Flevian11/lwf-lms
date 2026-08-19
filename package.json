@@ -23,6 +23,7 @@
     "dependencies": {
         "@inertiajs/react": "^3.7.0",
         "@inertiajs/vite": "^3.7.0",
+        "@laravel/passkeys": "^0.4.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8"
     }
