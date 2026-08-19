@@ -65,8 +65,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
-
+    'timezone' => 'Africa/Nairobi',
     /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
