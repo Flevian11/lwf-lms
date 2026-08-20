@@ -29,7 +29,7 @@ class FortifyServiceProvider extends ServiceProvider
     public function boot(): void
     {
         /*
-         * Inertia authentication views.
+         * Login.
          */
         Fortify::loginView(function () {
             return Inertia::render('Auth/Login', [
@@ -39,9 +39,48 @@ class FortifyServiceProvider extends ServiceProvider
             ]);
         });
 
+        /*
+         * Registration.
+         */
         Fortify::registerView(function () {
             return Inertia::render('Auth/Register', [
                 'canLogin' => true,
+            ]);
+        });
+
+        /*
+         * Forgot password.
+         *
+         * Fortify handles:
+         *
+         * GET  /forgot-password
+         * POST /forgot-password
+         *
+         * The GET request is rendered through Inertia while
+         * Fortify remains responsible for generating and sending
+         * the password reset token/email.
+         */
+        Fortify::requestPasswordResetLinkView(function () {
+            return Inertia::render('Auth/ForgotPassword', [
+                'status' => session('status'),
+            ]);
+        });
+
+        /*
+         * Reset password.
+         *
+         * Fortify handles:
+         *
+         * GET  /reset-password/{token}
+         * POST /reset-password
+         *
+         * The token is passed directly from the signed reset URL
+         * into the React page.
+         */
+        Fortify::resetPasswordView(function (Request $request) {
+            return Inertia::render('Auth/ResetPassword', [
+                'token' => $request->route('token'),
+                'email' => $request->query('email'),
             ]);
         });
 
@@ -53,24 +92,20 @@ class FortifyServiceProvider extends ServiceProvider
         /*
          * Password authentication pipeline.
          *
-         * IMPORTANT:
+         * Password login:
          *
-         * Native Fortify TOTP 2FA is not used.
-         *
-         * Instead:
-         *
-         * password
-         *    ↓
+         * email + password
+         *       ↓
          * validate credentials
-         *    ↓
+         *       ↓
          * email 2FA enabled?
-         *    ↓
-         * yes → send email OTP → challenge
-         * no  → normal authentication
+         *       ↓
+         * yes → send email OTP → 2FA challenge
+         * no  → authenticated session
          *
-         * Passkey authentication does NOT pass through this
-         * password pipeline, so passkeys remain passwordless
-         * and do not trigger email 2FA.
+         * Passkey authentication is independent of this pipeline.
+         * A successful passkey login therefore remains passwordless
+         * and does not trigger email 2FA.
          */
         Fortify::authenticateThrough(function (Request $request) {
             return array_filter([

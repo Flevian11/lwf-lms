@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
@@ -50,10 +51,14 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
      */
     protected string $guard_name = 'web';
 
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication / External Accounts
+    |--------------------------------------------------------------------------
+    */
+
     /**
      * External authentication accounts linked to this user.
-     *
-     * @return HasMany<SocialAccount>
      */
     public function socialAccounts(): HasMany
     {
@@ -62,34 +67,276 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 
     /**
      * Email two-factor authentication codes.
-     *
-     * @return HasMany<EmailTwoFactorCode>
      */
     public function emailTwoFactorCodes(): HasMany
     {
         return $this->hasMany(EmailTwoFactorCode::class);
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Learning Profile
+    |--------------------------------------------------------------------------
+    */
+
     /**
      * Learning interests selected by the student.
-     *
-     * @return BelongsToMany<LearningInterest>
      */
     public function learningInterests(): BelongsToMany
     {
         return $this->belongsToMany(
             LearningInterest::class,
-            'user_learning_interests'
+            'user_learning_interests',
+            'user_id',
+            'learning_interest_id'
         );
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Courses
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Course enrollments belonging to this user.
+     */
+    public function courseEnrollments(): HasMany
+    {
+        return $this->hasMany(CourseEnrollment::class);
+    }
+
+    /**
+     * Courses the user is enrolled in.
+     */
+    public function enrolledCourses(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Course::class,
+            'course_enrollments',
+            'user_id',
+            'course_id'
+        )->withPivot([
+            'id',
+            'source',
+            'payment_id',
+            'approved_by',
+            'approved_at',
+            'access_granted_at',
+            'status',
+            'enrolled_at',
+            'started_at',
+            'completed_at',
+        ])->withTimestamps();
+    }
+
+    /**
+     * Courses created by this user.
+     *
+     * Primarily used by administrators/instructors.
+     */
+    public function createdCourses(): HasMany
+    {
+        return $this->hasMany(
+            Course::class,
+            'created_by'
+        );
+    }
+
+    /**
+     * Course enrollments approved by this user.
+     */
+    public function approvedCourseEnrollments(): HasMany
+    {
+        return $this->hasMany(
+            CourseEnrollment::class,
+            'approved_by'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Lesson Progress
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Lesson progress records belonging to this user.
+     */
+    public function lessonProgress(): HasMany
+    {
+        return $this->hasMany(LessonProgress::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Assignments
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Assignments created by this user.
+     */
+    public function createdAssignments(): HasMany
+    {
+        return $this->hasMany(
+            Assignment::class,
+            'created_by'
+        );
+    }
+
+    /**
+     * Assignment submissions made by this user.
+     */
+    public function assignmentSubmissions(): HasMany
+    {
+        return $this->hasMany(AssignmentSubmission::class);
+    }
+
+    /**
+     * Assignment submissions graded by this user.
+     */
+    public function gradedAssignmentSubmissions(): HasMany
+    {
+        return $this->hasMany(
+            AssignmentSubmission::class,
+            'graded_by'
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Quizzes
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Quizzes created by this user.
+     */
+    public function createdQuizzes(): HasMany
+    {
+        return $this->hasMany(
+            Quiz::class,
+            'created_by'
+        );
+    }
+
+    /**
+     * Quiz attempts made by this user.
+     */
+    public function quizAttempts(): HasMany
+    {
+        return $this->hasMany(QuizAttempt::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Learning Activity / Analytics
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Event-level learning activity generated by this user.
+     *
+     * Used for:
+     * - weekly progress
+     * - activity history
+     * - analytics
+     * - points
+     * - streak calculations
+     * - recommendation signals
+     * - future AI context
+     */
+    public function learningActivities(): HasMany
+    {
+        return $this->hasMany(
+            StudentLearningActivity::class
+        );
+    }
+
+    /**
+     * Student learning streak.
+     */
+    public function studentStreak(): HasOne
+    {
+        return $this->hasOne(StudentStreak::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Achievements / Gamification
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Achievements earned by this user.
+     *
+     * This is the canonical relationship used by the
+     * dashboard service.
+     */
+    public function achievements(): HasMany
+    {
+        return $this->hasMany(
+            UserAchievement::class
+        );
+    }
+
+    /**
+     * Explicit alias for accessing the underlying
+     * user achievement records.
+     */
+    public function userAchievements(): HasMany
+    {
+        return $this->hasMany(
+            UserAchievement::class
+        );
+    }
+
+    /**
+     * Point transactions belonging to this user.
+     */
+    public function pointTransactions(): HasMany
+    {
+        return $this->hasMany(
+            PointTransaction::class
+        );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Payments
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Payments initiated by this user.
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Notifications
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * Send the branded email verification notification.
      */
     public function sendEmailVerificationNotification(): void
     {
-        $this->notify(new VerifyEmailNotification());
+        $this->notify(
+            new VerifyEmailNotification()
+        );
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Account State
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * Determine whether the user has completed onboarding.
@@ -106,6 +353,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
     {
         return (bool) $this->email_two_factor_enabled;
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Attribute Casting
+    |--------------------------------------------------------------------------
+    */
 
     /**
      * Attributes that should be cast.

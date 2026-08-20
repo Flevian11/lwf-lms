@@ -16,6 +16,7 @@
         "laravel/head": "^0.2.1",
         "laravel/socialite": "^5.30",
         "laravel/tinker": "^3.0",
+        "matomo/device-detector": "*",
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
