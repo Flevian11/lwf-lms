@@ -18,11 +18,12 @@ class CourseController extends Controller
     }
 
     /**
-     * Display a published course.
+     * Course overview / preview.
      *
-     * The complete course catalogue/curriculum structure remains visible
-     * to students. Actual lesson content and materials are restricted
-     * according to CourseAccessService.
+     * This endpoint deliberately exposes the course structure so students
+     * can understand what they are buying.
+     *
+     * Protected lesson content and protected materials are never exposed.
      */
     public function show(
         Request $request,
@@ -32,28 +33,212 @@ class CourseController extends Controller
 
         abort_unless($user !== null, 403);
 
+        $course = Course::query()
+            ->with([
+                'category',
+                'modules' => function ($query) {
+                    $query
+                        ->with([
+                            'lessons' => function ($lessonQuery) {
+                                $lessonQuery
+                                    ->where('status', 'published')
+                                    ->orderBy('position');
+                            },
+                        ])
+                        ->orderBy('position');
+                },
+            ])
+            ->where('slug', $slug)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        $accessLevel = $this->courseAccessService
+            ->accessLevel($user, $course);
+
+        $hasFullAccess = $this->courseAccessService
+            ->hasFullAccess($user, $course);
+
+        $enrollment = $this->courseAccessService
+            ->enrollment($user, $course);
+
         /*
-         * Load the course and its complete curriculum structure.
+         * Complete curriculum outline.
          *
-         * We intentionally load all published lessons so the student
-         * can see the complete course outline even when some content
-         * is locked.
+         * Locked lessons remain visible, but protected details are not.
          */
+        $modules = $course->modules
+            ->map(function ($module) use ($hasFullAccess) {
+                $moduleIsPreview = $module->is_preview === true;
+
+                $moduleCanAccess =
+                    $hasFullAccess || $moduleIsPreview;
+
+                $lessons = $module->lessons
+                    ->map(function ($lesson) use (
+                        $hasFullAccess,
+                        $moduleIsPreview,
+                    ) {
+                        $lessonIsPreview =
+                            $lesson->is_preview === true
+                            || $moduleIsPreview;
+
+                        $canAccess =
+                            $hasFullAccess || $lessonIsPreview;
+
+                        return [
+                            'id' => $lesson->id,
+                            'title' => $lesson->title,
+                            'slug' => $lesson->slug,
+
+                            /*
+                             * Descriptions of preview lessons are safe.
+                             * Locked lesson descriptions remain protected.
+                             */
+                            'description' => $canAccess
+                                ? $lesson->description
+                                : null,
+
+                            /*
+                             * NEVER expose protected lesson content here.
+                             */
+                            'content' => null,
+
+                            'type' => $lesson->type,
+                            'position' => $lesson->position,
+                            'duration_minutes' => $lesson->duration_minutes,
+
+                            'is_preview' => $lessonIsPreview,
+                            'locked' => ! $canAccess,
+                            'can_access' => $canAccess,
+
+                            'materials' => [],
+                        ];
+                    })
+                    ->values();
+
+                return [
+                    'id' => $module->id,
+                    'title' => $module->title,
+                    'description' => $module->description,
+                    'position' => $module->position,
+
+                    'is_preview' => $moduleIsPreview,
+                    'locked' => ! $moduleCanAccess,
+                    'can_access' => $moduleCanAccess,
+
+                    'lessons' => $lessons->all(),
+                ];
+            })
+            ->values();
+
+        $totalModules = $course->modules->count();
+
+        $totalLessons = $course->modules
+            ->sum(
+                fn ($module) =>
+                    $module->lessons->count(),
+            );
+
+        $previewLessonCount = $course->modules
+            ->flatMap(
+                fn ($module) =>
+                    $module->lessons,
+            )
+            ->filter(
+                fn ($lesson) =>
+                    $lesson->is_preview === true
+                    || $lesson->module?->is_preview === true,
+            )
+            ->count();
+
+        $dashboard = $this->studentDashboardService
+            ->getDashboardData($user);
+
+        return Inertia::render('Course', [
+            'student' => $dashboard['student'],
+            'stats' => $dashboard['stats'],
+
+            'course' => [
+                'id' => $course->id,
+                'title' => $course->title,
+                'slug' => $course->slug,
+
+                'short_description' => $course->short_description,
+                'description' => $course->description,
+
+                'thumbnail_path' => $course->thumbnail_path,
+
+                'level' => $course->level,
+                'category' => $course->category?->name,
+
+                'access_type' => $course->access_type,
+                'price' => $course->price,
+                'currency' => $course->currency,
+
+                'access_level' => $accessLevel,
+                'access_granted' => $hasFullAccess,
+
+                'enrolled' => $enrollment !== null,
+
+                'enrollment' => $enrollment
+                    ? [
+                        'status' => $enrollment->status,
+                        'source' => $enrollment->source,
+                        'access_granted_at' => $enrollment
+                            ->access_granted_at
+                            ?->toISOString(),
+                        'enrolled_at' => $enrollment
+                            ->enrolled_at
+                            ?->toISOString(),
+                        'started_at' => $enrollment
+                            ->started_at
+                            ?->toISOString(),
+                        'completed_at' => $enrollment
+                            ->completed_at
+                            ?->toISOString(),
+                    ]
+                    : null,
+
+                'total_modules' => $totalModules,
+                'total_lessons' => $totalLessons,
+                'preview_lesson_count' => $previewLessonCount,
+
+                'preview_available' => $previewLessonCount > 0,
+
+                'modules' => $modules->all(),
+            ],
+        ]);
+    }
+
+    /**
+     * Protected learning environment.
+     *
+     * Only free courses or paid courses with granted access can reach this
+     * endpoint.
+     */
+    public function learn(
+        Request $request,
+        string $slug,
+    ): Response {
+        $user = $request->user();
+
+        abort_unless($user !== null, 403);
+
         $course = Course::query()
             ->with([
                 'category',
 
-                'modules' => function ($query) use ($user) {
+                'modules' => function ($query) {
                     $query
                         ->with([
-                            'lessons' => function ($lessonQuery) use ($user) {
+                            'lessons' => function ($lessonQuery) {
                                 $lessonQuery
                                     ->where('status', 'published')
                                     ->with([
-                                        'progress' => function ($progressQuery) use ($user) {
+                                        'progress' => function ($progressQuery) {
                                             $progressQuery->where(
                                                 'user_id',
-                                                $user->id,
+                                                auth()->id(),
                                             );
                                         },
 
@@ -74,124 +259,78 @@ class CourseController extends Controller
             ->firstOrFail();
 
         /*
-         * Determine effective access on the server.
+         * SECURITY BOUNDARY.
          *
-         * free  = complete access
-         * full  = payment/admin approval has granted access
-         * preview = course information + preview content only
+         * The student cannot access the learning environment merely
+         * because the course exists in the catalogue.
          */
-        $accessLevel = $this->courseAccessService
-            ->accessLevel($user, $course);
-
-        $hasFullAccess = $this->courseAccessService
-            ->hasFullAccess($user, $course);
-
-        /*
-         * Build the complete visible curriculum.
-         *
-         * IMPORTANT:
-         *
-         * Locked modules remain visible.
-         * Locked lessons remain visible as locked items.
-         * Protected lesson content is NOT sent.
-         * Protected materials are NOT sent.
-         */
-        $modules = $course->modules
-            ->map(function ($module) use (
+        abort_unless(
+            $this->courseAccessService->hasFullAccess(
                 $user,
-                $hasFullAccess,
-            ) {
-                $moduleIsPreview = $module->is_preview === true;
+                $course,
+            ),
+            403,
+            'You do not currently have access to this course.',
+        );
 
-                $moduleCanAccess =
-                    $hasFullAccess || $moduleIsPreview;
-
+        $modules = $course->modules
+            ->map(function ($module) use ($user) {
                 $lessons = $module->lessons
-                    ->map(function ($lesson) use (
-                        $user,
-                        $hasFullAccess,
-                        $moduleIsPreview,
-                    ) {
-                        $lessonIsPreview =
-                            $lesson->is_preview === true
-                            || $moduleIsPreview;
+                    ->map(function ($lesson) use ($user) {
+                        $progress = $lesson->progress->first();
 
-                        $canAccessLesson =
-                            $hasFullAccess
-                            || $lessonIsPreview;
-
-                        /*
-                         * Only send materials which the student is
-                         * actually allowed to access.
-                         */
-                        $materials = collect();
-
-                        if ($canAccessLesson) {
-                            $materials = $lesson->materials
-                                ->filter(function ($material) use ($user) {
-                                    return $this->courseAccessService
+                        $materials = $lesson->materials
+                            ->filter(
+                                fn ($material) =>
+                                    $this->courseAccessService
                                         ->canAccessMaterial(
                                             $user,
                                             $material,
-                                        );
-                                })
-                                ->map(function ($material) {
-                                    return [
-                                        'id' => $material->id,
-                                        'title' => $material->title,
-                                        'description' => $material->description,
-                                        'type' => $material->type,
-
-                                        /*
-                                         * URLs/file paths are only included
-                                         * after access has been established.
-                                         */
-                                        'url' => $material->url,
-                                        'file_path' => $material->file_path,
-                                        'mime_type' => $material->mime_type,
-
-                                        'is_preview' => $material->is_preview,
-                                        'position' => $material->position,
-                                        'metadata' => $material->metadata,
-                                    ];
-                                })
-                                ->values();
-                        }
-
-                        $progress = $lesson->progress->first();
+                                        ),
+                            )
+                            ->map(function ($material) {
+                                return [
+                                    'id' => $material->id,
+                                    'title' => $material->title,
+                                    'description' => $material->description,
+                                    'type' => $material->type,
+                                    'url' => $material->url,
+                                    'file_path' => $material->file_path,
+                                    'mime_type' => $material->mime_type,
+                                    'is_preview' => $material->is_preview,
+                                    'position' => $material->position,
+                                    'metadata' => $material->metadata,
+                                ];
+                            })
+                            ->values();
 
                         return [
                             'id' => $lesson->id,
                             'title' => $lesson->title,
                             'slug' => $lesson->slug,
-
-                            /*
-                             * Description is course-preview information,
-                             * so it can remain visible for preview lessons.
-                             *
-                             * For locked lessons, don't expose it.
-                             */
-                            'description' => $canAccessLesson
-                                ? $lesson->description
-                                : null,
-
-                            /*
-                             * NEVER expose protected lesson content.
-                             */
-                            'content' => $canAccessLesson
-                                ? $lesson->content
-                                : null,
+                            'description' => $lesson->description,
+                            'content' => $lesson->content,
 
                             'type' => $lesson->type,
                             'position' => $lesson->position,
-                            'is_preview' => $lessonIsPreview,
                             'duration_minutes' => $lesson->duration_minutes,
 
-                            'locked' => ! $canAccessLesson,
-                            'can_access' => $canAccessLesson,
+                            'is_preview' => $lesson->is_preview,
+                            'locked' => false,
+                            'can_access' => true,
 
-                            'completed' => $canAccessLesson
-                                && $progress?->status === 'completed',
+                            'completed' =>
+                                $progress?->status === 'completed',
+
+                            'progress' => $progress
+                                ? [
+                                    'id' => $progress->id,
+                                    'status' => $progress->status,
+                                    'completed_at' => $progress
+                                        ->completed_at
+                                        ?->toISOString(),
+                                ]
+                                : null,
 
                             'materials' => $materials->all(),
                         ];
@@ -203,56 +342,18 @@ class CourseController extends Controller
                     'title' => $module->title,
                     'description' => $module->description,
                     'position' => $module->position,
-                    'is_preview' => $moduleIsPreview,
-
-                    'locked' => ! $moduleCanAccess,
-                    'can_access' => $moduleCanAccess,
-
+                    'is_preview' => $module->is_preview,
+                    'locked' => false,
+                    'can_access' => true,
                     'lessons' => $lessons->all(),
                 ];
             })
             ->values();
 
-        /*
-         * Course statistics.
-         */
-        $totalModules = $course->modules->count();
-
-        $totalLessons = $course->modules
+        $totalLessons = $modules
             ->sum(
                 fn ($module) =>
-                    $module->lessons->count(),
-            );
-
-        $previewModules = $course->modules
-            ->filter(
-                fn ($module) =>
-                    $module->is_preview === true,
-            )
-            ->values();
-
-        $previewLessons = $course->modules
-            ->filter(
-                fn ($module) =>
-                    $module->is_preview === true,
-            )
-            ->flatMap(
-                fn ($module) =>
-                    $module->lessons,
-            )
-            ->filter(
-                fn ($lesson) =>
-                    $lesson->is_preview === true
-                    || $lesson->module?->is_preview === true,
-            )
-            ->values();
-
-        $visibleLessons = $modules
-            ->sum(
-                fn ($module) =>
-                    collect($module['lessons'])
-                        ->where('can_access', true)
-                        ->count(),
+                    count($module['lessons']),
             );
 
         $completedLessons = $modules
@@ -260,27 +361,26 @@ class CourseController extends Controller
                 fn ($module) =>
                     $module['lessons'],
             )
-            ->where('completed', true)
+            ->filter(
+                fn ($lesson) =>
+                    $lesson['completed'] === true,
+            )
             ->count();
 
-        /*
-         * Current enrollment.
-         */
+        $progressPercentage = $totalLessons > 0
+            ? (int) round(
+                ($completedLessons / $totalLessons) * 100,
+            )
+            : 0;
+
         $enrollment = $this->courseAccessService
             ->enrollment($user, $course);
 
-        /*
-         * Load dashboard data once.
-         *
-         * StudentLayout requires the same student/stats contract
-         * used by Dashboard, Support and the other student pages.
-         */
         $dashboard = $this->studentDashboardService
             ->getDashboardData($user);
 
-        return Inertia::render('Course', [
+        return Inertia::render('CourseLearn', [
             'student' => $dashboard['student'],
-
             'stats' => $dashboard['stats'],
 
             'course' => [
@@ -300,67 +400,35 @@ class CourseController extends Controller
                 'price' => $course->price,
                 'currency' => $course->currency,
 
-                'published_at' => $course->published_at
-                    ?->toISOString(),
+                'access_level' => 'full',
+                'access_granted' => true,
 
-                /*
-                 * Effective access.
-                 */
-                'access_level' => $accessLevel,
-                'access_granted' => $hasFullAccess,
-
-                /*
-                 * Enrollment.
-                 */
                 'enrolled' => $enrollment !== null,
 
                 'enrollment' => $enrollment
                     ? [
                         'status' => $enrollment->status,
                         'source' => $enrollment->source,
-
                         'access_granted_at' => $enrollment
                             ->access_granted_at
                             ?->toISOString(),
-
                         'enrolled_at' => $enrollment
                             ->enrolled_at
                             ?->toISOString(),
-
                         'started_at' => $enrollment
                             ->started_at
                             ?->toISOString(),
-
                         'completed_at' => $enrollment
                             ->completed_at
                             ?->toISOString(),
                     ]
                     : null,
 
-                /*
-                 * Course statistics.
-                 */
-                'total_modules' => $totalModules,
+                'total_modules' => $modules->count(),
                 'total_lessons' => $totalLessons,
-
-                'visible_lessons' => $visibleLessons,
                 'completed_lessons' => $completedLessons,
+                'progress_percentage' => $progressPercentage,
 
-                'preview_module_count' =>
-                    $previewModules->count(),
-
-                'preview_lesson_count' =>
-                    $previewLessons->count(),
-
-                'preview_available' =>
-                    $previewModules->isNotEmpty(),
-
-                /*
-                 * Complete curriculum outline.
-                 *
-                 * Locked items are represented as locked instead of
-                 * disappearing from the course.
-                 */
                 'modules' => $modules->all(),
             ],
         ]);

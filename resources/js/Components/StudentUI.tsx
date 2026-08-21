@@ -169,6 +169,13 @@ export function Icon({
                 <circle cx="19" cy="12" r="1" fill="currentColor" />
             </>
         ),
+        upload: (
+            <>
+                <path d="M12 16V4" {...common} />
+                <path d="m7 9 5-5 5 5" {...common} />
+                <path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" {...common} />
+            </>
+        ),
     }
 
     return (

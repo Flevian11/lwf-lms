@@ -25,6 +25,8 @@ class AssignmentSubmission extends Model
         'graded_by',
         'submitted_at',
         'graded_at',
+        'transcript_path',
+        'transcript_generated_at',
     ];
 
     protected function casts(): array
@@ -35,6 +37,7 @@ class AssignmentSubmission extends Model
             'score' => 'integer',
             'submitted_at' => 'datetime',
             'graded_at' => 'datetime',
+            'transcript_generated_at' => 'datetime',
         ];
     }
 

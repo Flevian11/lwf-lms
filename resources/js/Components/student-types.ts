@@ -52,6 +52,8 @@ export interface CourseItem {
     completed_lessons: number
     total_lessons: number
     enrolled_at: string | null
+    access_granted?: boolean
+    access_level?: 'free' | 'full' | 'preview'
     short_description?: string | null
     access_type?: string
     price?: string | number
@@ -108,7 +110,7 @@ export type IconName =
     | 'grid' | 'book' | 'assignment' | 'quiz' | 'trophy' | 'chart'
     | 'shield' | 'user' | 'search' | 'sun' | 'moon' | 'menu' | 'x'
     | 'chevron' | 'calendar' | 'clock' | 'sparkles' | 'flame' | 'arrow'
-    | 'logout' | 'support' | 'chatbot' | 'check' | 'target' | 'play' | 'more'
+    | 'logout' | 'support' | 'chatbot' | 'check' | 'target' | 'play' | 'more' | 'upload'
 
 export interface SearchResult {
     type: 'Course' | 'Assignment' | 'Quiz'

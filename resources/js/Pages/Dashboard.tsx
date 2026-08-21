@@ -78,7 +78,23 @@ export default function Dashboard() {
         })
         .slice(0, 6)
 
-    const maxActivities = Math.max(1, ...weekly.days.map((day) => day.activities))
+    const chartMax = Math.max(1, ...weekly.days.map((day) => day.activities))
+    const chartPeak = weekly.days.reduce(
+        (peak, day) => (day.activities > peak.activities ? day : peak),
+        weekly.days[0] ?? { activities: 0, label: '—', date: '', points: 0 },
+    )
+
+    const courseIcon = (course: (typeof courses)[number]): IconName => {
+        const category = `${course.category ?? ''} ${course.title}`.toLowerCase()
+
+        if (category.includes('git') || category.includes('version')) return 'chart'
+        if (category.includes('javascript') || category.includes('react') || category.includes('frontend')) return 'book'
+        if (category.includes('design') || category.includes('ui') || category.includes('ux')) return 'sparkles'
+        if (category.includes('database') || category.includes('sql')) return 'chart'
+        if (category.includes('python')) return 'book'
+        if (category.includes('laravel') || category.includes('php') || category.includes('backend')) return 'book'
+        return 'book'
+    }
 
     return (
         <StudentLayout
@@ -196,12 +212,59 @@ export default function Dashboard() {
                         </section>
 
                         <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                            <StatCard
-                                icon="book"
-                                label="Active courses"
-                                value={stats.courses.active}
-                                detail={`${stats.courses.completed} completed course${stats.courses.completed === 1 ? '' : 's'}`}
-                            />
+                            <Card className="relative overflow-hidden p-5">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
+                                            Active courses
+                                        </p>
+                                        <p className="mt-2 text-2xl font-bold text-slate-950 dark:text-white">
+                                            {stats.courses.active}
+                                        </p>
+                                    </div>
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#6ba3ff]">
+                                        <Icon name="book" className="h-5 w-5" />
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 flex items-center">
+                                    {courses.slice(0, 4).map((course, index) => {
+                                        const thumbnail = assetUrl(course.thumbnail_path)
+
+                                        return (
+                                            <div
+                                                key={course.id}
+                                                className={`relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#edf4ff] text-[#1554c0] shadow-sm dark:border-slate-900 dark:bg-[#172945] dark:text-[#6ba3ff] ${index > 0 ? '-ml-2' : ''}`}
+                                                title={course.title}
+                                            >
+                                                {thumbnail ? (
+                                                    <img src={thumbnail} alt="" className="h-full w-full object-cover" />
+                                                ) : (
+                                                    <Icon name={courseIcon(course)} className="h-4 w-4" />
+                                                )}
+                                            </div>
+                                        )
+                                    })}
+
+                                    {courses.length > 4 ? (
+                                        <div className="-ml-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-[10px] font-bold text-slate-600 shadow-sm dark:border-slate-900 dark:bg-slate-800 dark:text-slate-300">
+                                            +{courses.length - 4}
+                                        </div>
+                                    ) : null}
+
+                                    <p className="ml-3 min-w-0 truncate text-[10px] leading-4 text-slate-500 dark:text-slate-400">
+                                        {courses.length === 1
+                                            ? `Focused on ${courses[0].title}`
+                                            : courses.length > 1
+                                              ? `${courses.length} learning paths in progress`
+                                              : 'Your enrolled courses will appear here'}
+                                    </p>
+                                </div>
+
+                                <p className="mt-3 text-[10px] text-slate-400 dark:text-slate-500">
+                                    {stats.courses.completed} completed course{stats.courses.completed === 1 ? '' : 's'}
+                                </p>
+                            </Card>
 
                             <StatCard
                                 icon="chart"
@@ -286,34 +349,121 @@ export default function Dashboard() {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <div className="relative">
-                                                <div className="flex h-48 items-end gap-2 border-b border-slate-100 px-1 pb-0 sm:gap-4 dark:border-slate-800">
-                                                    {weekly.days.map((day) => {
-                                                        const height = Math.max(
-                                                            10,
-                                                            Math.round((day.activities / maxActivities) * 100),
-                                                        )
-                                                        return (
-                                                            <div key={day.date} className="group flex h-full flex-1 flex-col justify-end">
-                                                                <div className="mb-2 text-center text-[10px] font-semibold text-slate-400 opacity-0 transition group-hover:opacity-100">
-                                                                    {day.points} pts
-                                                                </div>
-                                                                <div
-                                                                    className="w-full rounded-t-xl bg-gradient-to-t from-[#1554c0] to-[#6ba3ff] opacity-90 transition-all duration-500 group-hover:opacity-100"
-                                                                    style={{ height: `${height}%` }}
-                                                                    title={`${day.activities} activities · ${day.points} points`}
-                                                                />
-                                                            </div>
-                                                        )
-                                                    })}
+                                            <div className="relative mt-2">
+                                                <div className="mb-4 flex items-end justify-between gap-4">
+                                                    <div>
+                                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                                            Learning rhythm
+                                                        </p>
+                                                        <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-white">
+                                                            {chartPeak.activities} activit{chartPeak.activities === 1 ? 'y' : 'ies'} on {chartPeak.label}
+                                                        </p>
+                                                    </div>
+                                                    <div className="rounded-xl bg-[#edf4ff] px-3 py-2 text-right dark:bg-[#172945]">
+                                                        <p className="text-[9px] uppercase tracking-[0.1em] text-slate-400">Points</p>
+                                                        <p className="mt-0.5 text-sm font-bold text-[#1554c0] dark:text-[#6ba3ff]">{weekly.total_points}</p>
+                                                    </div>
                                                 </div>
 
-                                                <div className="mt-3 flex gap-2 sm:gap-4">
-                                                    {weekly.days.map((day) => (
-                                                        <div key={day.date} className="flex-1 text-center text-[10px] font-medium text-slate-500 dark:text-slate-400">
-                                                            {day.label}
-                                                        </div>
-                                                    ))}
+                                                <div className="relative h-64 overflow-hidden rounded-2xl border border-slate-100 bg-gradient-to-b from-[#f8fbff] via-white to-[#f6f4ff] dark:border-slate-800 dark:from-[#111b2c] dark:via-[#0f1827] dark:to-[#17152d]">
+                                                    <div className="pointer-events-none absolute inset-x-0 top-8 h-px bg-slate-200/70 dark:bg-slate-800" />
+                                                    <div className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-slate-200/60 dark:bg-slate-800/80" />
+                                                    <div className="pointer-events-none absolute inset-x-0 bottom-14 h-px bg-slate-200/70 dark:bg-slate-800" />
+
+                                                    <svg
+                                                        viewBox="0 0 700 260"
+                                                        preserveAspectRatio="none"
+                                                        className="absolute inset-x-0 top-0 h-[205px] w-full"
+                                                        role="img"
+                                                        aria-label="Seven day learning activity chart"
+                                                    >
+                                                        <defs>
+                                                            <linearGradient id="weeklyActivityFill" x1="0" x2="0" y1="0" y2="1">
+                                                                <stop offset="0%" stopColor="#1554c0" stopOpacity="0.28" />
+                                                                <stop offset="100%" stopColor="#6a5cff" stopOpacity="0.02" />
+                                                            </linearGradient>
+                                                            <linearGradient id="weeklyActivityBars" x1="0" x2="0" y1="0" y2="1">
+                                                                <stop offset="0%" stopColor="#1554c0" stopOpacity="0.22" />
+                                                                <stop offset="100%" stopColor="#1554c0" stopOpacity="0.04" />
+                                                            </linearGradient>
+                                                        </defs>
+
+                                                        {weekly.days.map((day, index) => {
+                                                            const x = weekly.days.length > 1 ? 54 + (index / (weekly.days.length - 1)) * 592 : 350
+                                                            const barHeight = Math.max(8, (day.activities / chartMax) * 125)
+                                                            const barY = 178 - barHeight
+                                                            const y = 172 - (day.activities / chartMax) * 128
+                                                            const active = day.date === chartPeak.date
+
+                                                            return (
+                                                                <g key={day.date}>
+                                                                    <rect
+                                                                        x={x - 22}
+                                                                        y={barY}
+                                                                        width="44"
+                                                                        height={barHeight}
+                                                                        rx="14"
+                                                                        fill="url(#weeklyActivityBars)"
+                                                                    />
+                                                                    <line
+                                                                        x1={x}
+                                                                        x2={x}
+                                                                        y1={y + 8}
+                                                                        y2={178}
+                                                                        stroke="#1554c0"
+                                                                        strokeOpacity={active ? 0.18 : 0.07}
+                                                                        strokeWidth="2"
+                                                                    />
+                                                                    <circle
+                                                                        cx={x}
+                                                                        cy={y}
+                                                                        r={active ? 7 : 5}
+                                                                        fill="white"
+                                                                        stroke="#1554c0"
+                                                                        strokeWidth={active ? 3 : 2}
+                                                                    />
+                                                                    {active ? (
+                                                                        <circle cx={x} cy={y} r="11" fill="#1554c0" fillOpacity="0.08" />
+                                                                    ) : null}
+                                                                    <text
+                                                                        x={x}
+                                                                        y={Math.max(18, y - 15)}
+                                                                        textAnchor="middle"
+                                                                        className="fill-slate-600 text-[12px] font-semibold dark:fill-slate-300"
+                                                                    >
+                                                                        {day.activities}
+                                                                    </text>
+                                                                </g>
+                                                            )
+                                                        })}
+
+                                                        <path
+                                                            d={weekly.days.map((day, index) => {
+                                                                const x = weekly.days.length > 1 ? 54 + (index / (weekly.days.length - 1)) * 592 : 350
+                                                                const y = 172 - (day.activities / chartMax) * 128
+                                                                return `${index === 0 ? 'M' : 'L'} ${x} ${y}`
+                                                            }).join(' ')}
+                                                            fill="none"
+                                                            stroke="#1554c0"
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth="4"
+                                                            vectorEffect="non-scaling-stroke"
+                                                        />
+                                                    </svg>
+
+                                                    <div className="absolute inset-x-4 bottom-3 flex justify-between gap-2">
+                                                        {weekly.days.map((day) => (
+                                                            <div key={day.date} className="group relative min-w-0 flex-1 text-center">
+                                                                <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                                                                    {day.label}
+                                                                </span>
+                                                                <span className="pointer-events-none absolute bottom-6 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-[9px] font-semibold text-white opacity-0 shadow-lg transition group-hover:opacity-100 dark:bg-white dark:text-slate-900">
+                                                                    {day.activities} activit{day.activities === 1 ? 'y' : 'ies'} · {day.points} pts
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -405,147 +555,120 @@ export default function Dashboard() {
 
                         <section className="mt-8">
                             <SectionHeader
-                                title="Continue learning"
-                                description="Pick up where you left off"
+                                title="My learning"
+                                description="Your enrolled courses and current learning status"
                                 action={
                                     <Link
                                         href="/courses"
                                         className="hidden items-center gap-1 text-xs font-semibold text-[#1554c0] hover:underline dark:text-[#6ba3ff] sm:flex"
                                     >
                                         View all courses
-                                        <Icon
-                                            name="arrow"
-                                            className="h-3.5 w-3.5"
-                                        />
+                                        <Icon name="arrow" className="h-3.5 w-3.5" />
                                     </Link>
                                 }
                             />
 
-                            {courses.length ? (
-                                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                                    {courses.slice(0, 6).map((course) => {
-                                        const thumbnail = assetUrl(
-                                            course.thumbnail_path,
-                                        )
+                            <Card className="mt-4 overflow-hidden">
+                                {courses.length ? (
+                                    <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                        {courses.slice(0, 6).map((course) => {
+                                            const thumbnail = assetUrl(course.thumbnail_path)
+                                            const pendingAccess = course.access_granted === false
+                                            const completed = course.progress === 100
 
-                                        return (
-                                            <Card
-                                                key={course.id}
-                                                className="overflow-hidden transition hover:-translate-y-0.5 hover:shadow-[0_15px_40px_rgba(23,32,51,0.08)]"
-                                            >
-                                                <div className="relative h-36 overflow-hidden bg-gradient-to-br from-[#eaf1ff] to-[#f5f2ff] dark:from-[#15213a] dark:to-[#1b1832]">
-                                                    {thumbnail ? (
-                                                        <img
-                                                            src={thumbnail}
-                                                            alt=""
-                                                            className="h-full w-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="flex h-full items-center justify-center text-[#1554c0]/25 dark:text-[#6ba3ff]/25">
-                                                            <Icon
-                                                                name="book"
-                                                                className="h-14 w-14"
-                                                            />
-                                                        </div>
-                                                    )}
-
-                                                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/35 to-transparent" />
-
-                                                    <div className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-[#1554c0] backdrop-blur dark:bg-slate-950/80 dark:text-[#6ba3ff]">
-                                                        {course.level}
-                                                    </div>
-
-                                                    {course.progress === 100 ? (
-                                                        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[9px] font-bold text-white">
-                                                            <Icon
-                                                                name="check"
-                                                                className="h-3 w-3"
-                                                            />
-                                                            Complete
-                                                        </div>
-                                                    ) : null}
-                                                </div>
-
-                                                <div className="p-5">
-                                                    <p className="text-[10px] font-medium text-slate-400">
-                                                        {course.category ??
-                                                            'Learning'}
-                                                    </p>
-
-                                                    <h3 className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-slate-900 dark:text-white">
-                                                        {course.title}
-                                                    </h3>
-
-                                                    <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                                                        {course.completed_lessons}{' '}
-                                                        of{' '}
-                                                        {course.total_lessons}{' '}
-                                                        lessons completed
-                                                    </p>
-
-                                                    <div className="mt-4">
-                                                        <div className="flex items-center justify-between text-[10px] font-semibold">
-                                                            <span className="text-slate-400">
-                                                                Progress
-                                                            </span>
-                                                            <span className="text-[#1554c0] dark:text-[#6ba3ff]">
-                                                                {
-                                                                    course.progress
-                                                                }
-                                                                %
-                                                            </span>
+                                            return (
+                                                <div
+                                                    key={course.id}
+                                                    className="flex flex-col gap-4 p-4 transition hover:bg-slate-50/80 sm:flex-row sm:items-center sm:p-5 dark:hover:bg-slate-900/50"
+                                                >
+                                                    <div className="flex min-w-0 flex-1 items-center gap-4">
+                                                        <div className="h-16 w-24 shrink-0 overflow-hidden rounded-xl bg-gradient-to-br from-[#eaf1ff] to-[#f5f2ff] dark:from-[#15213a] dark:to-[#1b1832]">
+                                                            {thumbnail ? (
+                                                                <img src={thumbnail} alt="" className="h-full w-full object-cover" />
+                                                            ) : (
+                                                                <div className="flex h-full w-full items-center justify-center text-[#1554c0]/25 dark:text-[#6ba3ff]/25">
+                                                                    <Icon name="book" className="h-7 w-7" />
+                                                                </div>
+                                                            )}
                                                         </div>
 
-                                                        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                                                            <div
-                                                                className="h-full rounded-full bg-gradient-to-r from-[#1554c0] to-[#6a5cff]"
-                                                                style={{
-                                                                    width: `${course.progress}%`,
-                                                                }}
-                                                            />
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-slate-400">
+                                                                    {course.category ?? 'Learning'}
+                                                                </p>
+                                                                {pendingAccess ? (
+                                                                    <span className="rounded-full bg-amber-50 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.06em] text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                                                                        Pending access
+                                                                    </span>
+                                                                ) : completed ? (
+                                                                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.06em] text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                                                                        Complete
+                                                                    </span>
+                                                                ) : null}
+                                                            </div>
+
+                                                            <h3 className="mt-1 line-clamp-1 text-sm font-semibold text-slate-900 dark:text-white">
+                                                                {course.title}
+                                                            </h3>
+
+                                                            <div className="mt-2 flex max-w-md items-center gap-3">
+                                                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                                                    <div
+                                                                        className="h-full rounded-full bg-gradient-to-r from-[#1554c0] to-[#6a5cff]"
+                                                                        style={{ width: `${course.progress}%` }}
+                                                                    />
+                                                                </div>
+                                                                <span className="shrink-0 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                                                                    {course.progress}%
+                                                                </span>
+                                                            </div>
+
+                                                            <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+                                                                {course.completed_lessons} of {course.total_lessons} lessons completed
+                                                            </p>
                                                         </div>
                                                     </div>
 
-                                                    <Link
-                                                        href={`/courses/${course.slug}`}
-                                                        className="mt-5 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-[#1554c0] hover:text-white dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-[#4c8dff] dark:hover:text-[#07101f]"
-                                                    >
-                                                        {course.progress === 0
-                                                            ? 'Start course'
-                                                            : course.progress ===
-                                                                100
-                                                              ? 'Review course'
-                                                              : 'Continue course'}
-
-                                                        <Icon
-                                                            name="arrow"
-                                                            className="h-3.5 w-3.5"
-                                                        />
-                                                    </Link>
+                                                    <div className="flex shrink-0 items-center gap-2 sm:w-44 sm:justify-end">
+                                                        {pendingAccess ? (
+                                                            <span className="inline-flex items-center gap-2 rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+                                                                <Icon name="clock" className="h-3.5 w-3.5" />
+                                                                Pending access
+                                                            </span>
+                                                        ) : (
+                                                            <Link
+                                                                href={`/courses/${course.slug}/learn`}
+                                                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1554c0] px-3.5 py-2.5 text-xs font-semibold text-white transition hover:bg-[#1048a8]"
+                                                            >
+                                                                {completed ? 'Review course' : course.progress > 0 ? 'Continue learning' : 'Start learning'}
+                                                                <Icon name="arrow" className="h-3.5 w-3.5" />
+                                                            </Link>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                            </Card>
-                                        )
-                                    })}
-                                </div>
-                            ) : (
-                                <EmptyState
-                                    icon="book"
-                                    title="No active courses yet"
-                                    description="Once you enroll in a course, your active learning journey and lesson progress will appear here."
-                                    action={
-                                        <Link
-                                            href="/courses"
-                                            className="inline-flex items-center gap-2 rounded-xl bg-[#1554c0] px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#1048a8]"
-                                        >
-                                            Explore courses
-                                            <Icon
-                                                name="arrow"
-                                                className="h-3.5 w-3.5"
-                                            />
-                                        </Link>
-                                    }
-                                />
-                            )}
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <div className="p-5 sm:p-6">
+                                        <EmptyState
+                                            icon="book"
+                                            title="No active courses yet"
+                                            description="Once you enroll in a course, your learning journey will appear here."
+                                            action={
+                                                <Link
+                                                    href="/courses"
+                                                    className="inline-flex items-center gap-2 rounded-xl bg-[#1554c0] px-4 py-2.5 text-xs font-semibold text-white shadow-sm hover:bg-[#1048a8]"
+                                                >
+                                                    Explore courses
+                                                    <Icon name="arrow" className="h-3.5 w-3.5" />
+                                                </Link>
+                                            }
+                                        />
+                                    </div>
+                                )}
+                            </Card>
                         </section>
 
                         <section className="mt-8 grid gap-6 lg:grid-cols-2">
@@ -688,11 +811,13 @@ export default function Dashboard() {
                                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
                                         {activities.slice(0, 8).map((activity) => {
                                             const title =
-                                                activity.lesson ??
-                                                activity.assignment ??
-                                                activity.quiz ??
-                                                activity.course ??
-                                                'Learning activity'
+                                                activity.type === 'course_enrollment'
+                                                    ? `Enrolled in ${activity.course ?? 'course'}`
+                                                    : activity.lesson ??
+                                                      activity.assignment ??
+                                                      activity.quiz ??
+                                                      activity.course ??
+                                                      'Learning activity'
 
                                             const icon: IconName =
                                                 activity.type === 'quiz'

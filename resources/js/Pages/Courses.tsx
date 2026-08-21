@@ -1,32 +1,51 @@
+import { useMemo, useState } from 'react'
 import { Head, router } from '@inertiajs/react'
-import { useState } from 'react'
+
 import StudentLayout from '../Components/StudentLayout'
 import {
     Card,
-    SectionHeader,
     EmptyState,
     Icon,
+    SectionHeader,
     assetUrl,
 } from '../Components/StudentUI'
+
 import type {
     DashboardStats,
     Student,
 } from '../Components/student-types'
 
-interface EnrolledCourse {
+/*
+|--------------------------------------------------------------------------
+| Current course
+|--------------------------------------------------------------------------
+|
+| This is the contract returned by StudentDashboardService::currentCourses().
+|
+*/
+
+interface CurrentCourse {
     id: number
     title: string
     slug: string
     thumbnail_path: string | null
     level: string
     category: string | null
+
     progress: number
     completed_lessons: number
     total_lessons: number
     enrolled_at: string | null
-    access_level?: string
+
+    access_level?: 'full' | 'preview'
     access_granted?: boolean
 }
+
+/*
+|--------------------------------------------------------------------------
+| Catalogue preview lesson
+|--------------------------------------------------------------------------
+*/
 
 interface PreviewLesson {
     id: number
@@ -38,6 +57,12 @@ interface PreviewLesson {
     duration_minutes: number | null
 }
 
+/*
+|--------------------------------------------------------------------------
+| Catalogue preview module
+|--------------------------------------------------------------------------
+*/
+
 interface PreviewModule {
     id: number
     title: string
@@ -46,22 +71,39 @@ interface PreviewModule {
     lessons: PreviewLesson[]
 }
 
+/*
+|--------------------------------------------------------------------------
+| Catalogue course
+|--------------------------------------------------------------------------
+|
+| This deliberately does NOT extend CourseItem.
+|
+| CatalogueCourse and CourseItem represent different backend concepts.
+|
+*/
+
 interface CatalogueCourse {
     id: number
     title: string
     slug: string
+
     short_description: string | null
     description: string | null
+
     thumbnail_path: string | null
-    level: string
+
+    level: string | null
     category: string | null
-    access_type: string
-    price: string | number
-    currency: string
+
+    access_type: string | null
+    price: string | number | null
+    currency: string | null
+
     published_at: string | null
 
     enrolled: boolean
-    access_level: string
+
+    access_level: 'full' | 'preview'
     access_granted: boolean
 
     preview_available: boolean
@@ -74,607 +116,1104 @@ interface CatalogueCourse {
     preview_modules: PreviewModule[]
 }
 
-interface CoursesProps {
+/*
+|--------------------------------------------------------------------------
+| Page props
+|--------------------------------------------------------------------------
+*/
+
+interface CoursesPageProps {
     student: Student
     stats: DashboardStats
-    courses?: EnrolledCourse[]
+
+    courses?: CurrentCourse[]
     catalogue?: CatalogueCourse[]
 }
 
-function formatLevel(level: string): string {
-    if (!level) {
-        return 'All levels'
-    }
-
-    return level
-        .replace(/[-_]+/g, ' ')
-        .replace(/\b\w/g, (letter) => letter.toUpperCase())
-}
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
 
 function formatPrice(
-    price: string | number,
-    currency: string,
-    accessType: string,
+    price: string | number | null,
+    currency: string | null,
 ): string {
-    if (accessType === 'free') {
+    if (
+        price === null ||
+        price === undefined ||
+        price === ''
+    ) {
+        return ''
+    }
+
+    const numericPrice = Number(price)
+
+    if (Number.isNaN(numericPrice)) {
+        return `${currency ?? 'KES'} ${price}`
+    }
+
+    if (numericPrice <= 0) {
         return 'Free'
     }
 
-    const amount = Number(price)
-
-    if (!Number.isFinite(amount)) {
-        return `${currency} ${price}`
-    }
-
-    return `${currency} ${amount.toLocaleString('en-KE', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-    })}`
+    return `${currency ?? 'KES'} ${numericPrice.toLocaleString(
+        'en-KE',
+        {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2,
+        },
+    )}`
 }
 
-function CourseThumbnail({
-    title,
-    thumbnailPath,
-    className = 'h-48',
-}: {
-    title: string
-    thumbnailPath: string | null
-    className?: string
-}) {
-    const image = assetUrl(thumbnailPath)
-
-    if (image) {
-        return (
-            <img
-                src={image}
-                alt={title}
-                className={`w-full ${className} object-cover`}
-            />
-        )
-    }
-
-    return (
-        <div
-            className={`flex w-full ${className} items-center justify-center bg-gradient-to-br from-[#edf4ff] via-[#f5f3ff] to-[#eef7ff] text-[#1554c0] dark:from-[#172945] dark:via-[#211a3b] dark:to-[#14253d] dark:text-[#6ba3ff]`}
-        >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/80 shadow-sm dark:bg-slate-900/50">
-                <Icon name="book" className="h-7 w-7" />
-            </div>
-        </div>
+function clampProgress(value: number): number {
+    return Math.max(
+        0,
+        Math.min(100, Number(value) || 0),
     )
 }
 
-function LoadingSpinner({
-    light = false,
-}: {
-    light?: boolean
-}) {
-    return (
-        <span
-            aria-hidden="true"
-            className={`h-4 w-4 animate-spin rounded-full border-2 ${
-                light
-                    ? 'border-white/40 border-t-white'
-                    : 'border-[#1554c0]/20 border-t-[#1554c0]'
-            }`}
-        />
-    )
-}
-
-function AccessBadge({
-    course,
-}: {
-    course: CatalogueCourse
-}) {
-    if (course.access_granted) {
-        return (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-                <Icon name="check" className="h-3 w-3" />
-                Full access
-            </span>
-        )
-    }
-
-    if (course.access_type === 'free') {
-        return (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400">
-                <Icon name="check" className="h-3 w-3" />
-                Free
-            </span>
-        )
-    }
-
-    return (
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
-            <Icon name="play" className="h-3 w-3" />
-            Preview available
-        </span>
-    )
-}
-
-function EnrolledCourseCard({
-    course,
-    loadingSlug,
-    onOpen,
-}: {
-    course: EnrolledCourse
-    loadingSlug: string | null
-    onOpen: (course: EnrolledCourse) => void
-}) {
-    const progress = Math.min(
-        100,
-        Math.max(0, Number(course.progress) || 0),
-    )
-
-    const loading = loadingSlug === course.slug
-
-    return (
-        <Card className="overflow-hidden">
-            <div className="grid md:grid-cols-[220px_minmax(0,1fr)]">
-                <CourseThumbnail
-                    title={course.title}
-                    thumbnailPath={course.thumbnail_path}
-                    className="h-full min-h-[210px]"
-                />
-
-                <div className="p-5 sm:p-6">
-                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                                {course.category && (
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#1554c0] dark:text-[#6ba3ff]">
-                                        {course.category}
-                                    </span>
-                                )}
-
-                                <span className="text-[10px] text-slate-400">
-                                    {formatLevel(course.level)}
-                                </span>
-
-                                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                                    <Icon
-                                        name="check"
-                                        className="h-3 w-3"
-                                    />
-                                    Access active
-                                </span>
-                            </div>
-
-                            <h3 className="mt-2 text-xl font-bold tracking-tight text-slate-950 dark:text-white">
-                                {course.title}
-                            </h3>
-
-                            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
-                                {course.completed_lessons} of{' '}
-                                {course.total_lessons} lessons completed
-                            </p>
-                        </div>
-
-                        <button
-                            type="button"
-                            onClick={() => onOpen(course)}
-                            disabled={loadingSlug !== null}
-                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1554c0] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1248a5] disabled:cursor-not-allowed disabled:opacity-70"
-                        >
-                            {loading ? (
-                                <>
-                                    <LoadingSpinner light />
-                                    Opening...
-                                </>
-                            ) : (
-                                <>
-                                    Continue learning
-                                    <Icon
-                                        name="arrow"
-                                        className="h-3.5 w-3.5"
-                                    />
-                                </>
-                            )}
-                        </button>
-                    </div>
-
-                    <div className="mt-6">
-                        <div className="flex items-end justify-between gap-4">
-                            <div>
-                                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                    Your progress
-                                </p>
-
-                                <p className="mt-1 text-[10px] text-slate-400">
-                                    Keep going — you're making progress.
-                                </p>
-                            </div>
-
-                            <span className="text-sm font-bold text-[#1554c0] dark:text-[#6ba3ff]">
-                                {progress}%
-                            </span>
-                        </div>
-
-                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
-                            <div
-                                className="h-full rounded-full bg-gradient-to-r from-[#1554c0] to-[#6a5cff] transition-all duration-500"
-                                style={{
-                                    width: `${progress}%`,
-                                }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Card>
-    )
-}
-
-function CatalogueCourseCard({
-    course,
-    loadingSlug,
-    onOpen,
-}: {
-    course: CatalogueCourse
-    loadingSlug: string | null
-    onOpen: (course: CatalogueCourse) => void
-}) {
-    const loading = loadingSlug === course.slug
-    const fullAccess = course.access_granted
-    const free = course.access_type === 'free'
-
-    const actionLabel = fullAccess
-        ? 'Continue learning'
-        : free
-          ? 'Start course'
-          : 'View preview'
-
-    return (
-        <Card className="group overflow-hidden transition duration-200 hover:-translate-y-0.5 hover:shadow-lg">
-            <div className="relative overflow-hidden">
-                <CourseThumbnail
-                    title={course.title}
-                    thumbnailPath={course.thumbnail_path}
-                />
-
-                <div className="absolute left-3 top-3">
-                    <AccessBadge course={course} />
-                </div>
-
-                <div className="absolute bottom-3 right-3 rounded-lg bg-slate-950/75 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur-sm">
-                    {course.module_count}{' '}
-                    {course.module_count === 1
-                        ? 'topic'
-                        : 'topics'}
-                </div>
-            </div>
-
-            <div className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                            {course.category && (
-                                <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#1554c0] dark:text-[#6ba3ff]">
-                                    {course.category}
-                                </span>
-                            )}
-
-                            <span className="text-[10px] text-slate-400">
-                                {formatLevel(course.level)}
-                            </span>
-                        </div>
-
-                        <h3 className="mt-2 line-clamp-2 text-base font-bold tracking-tight text-slate-950 dark:text-white">
-                            {course.title}
-                        </h3>
-                    </div>
-
-                    <div className="shrink-0 text-right">
-                        <p className="text-sm font-bold text-slate-950 dark:text-white">
-                            {formatPrice(
-                                course.price,
-                                course.currency,
-                                course.access_type,
-                            )}
-                        </p>
-                    </div>
-                </div>
-
-                <p className="mt-3 line-clamp-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                    {course.short_description ||
-                        course.description ||
-                        'Explore this course and discover what you will learn.'}
-                </p>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {course.module_count}{' '}
-                        {course.module_count === 1
-                            ? 'topic'
-                            : 'topics'}
-                    </span>
-
-                    <span className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                        {course.lesson_count}{' '}
-                        {course.lesson_count === 1
-                            ? 'lesson'
-                            : 'lessons'}
-                    </span>
-
-                    {course.preview_available && (
-                        <span className="rounded-lg bg-[#edf4ff] px-2.5 py-1.5 text-[10px] font-medium text-[#1554c0] dark:bg-[#172945] dark:text-[#6ba3ff]">
-                            {course.preview_lesson_count}{' '}
-                            preview{' '}
-                            {course.preview_lesson_count === 1
-                                ? 'lesson'
-                                : 'lessons'}
-                        </span>
-                    )}
-                </div>
-
-                {course.preview_available && !fullAccess && (
-                    <div className="mt-4 rounded-xl border border-[#dfe7f3] bg-[#f8fbff] px-3.5 py-3 dark:border-slate-800 dark:bg-slate-900/50">
-                        <div className="flex items-start gap-2.5">
-                            <div className="mt-0.5 text-[#1554c0] dark:text-[#6ba3ff]">
-                                <Icon
-                                    name="play"
-                                    className="h-4 w-4"
-                                />
-                            </div>
-
-                            <div>
-                                <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">
-                                    Preview this course
-                                </p>
-
-                                <p className="mt-0.5 text-[10px] leading-5 text-slate-500 dark:text-slate-400">
-                                    View the course overview, curriculum and
-                                    available preview lessons before getting
-                                    full access.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                <div className="mt-5 flex items-center justify-between gap-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-                    <div className="min-w-0">
-                        <p className="text-[10px] font-semibold text-slate-700 dark:text-slate-200">
-                            {fullAccess
-                                ? 'Your access is active'
-                                : free
-                                  ? 'Free course'
-                                  : 'Full access required'}
-                        </p>
-
-                        <p className="mt-1 text-[10px] text-slate-400">
-                            {fullAccess
-                                ? 'Continue where you left off'
-                                : free
-                                  ? 'Start learning now'
-                                  : 'Explore the course first'}
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => onOpen(course)}
-                        disabled={loadingSlug !== null}
-                        className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-70 ${
-                            fullAccess || free
-                                ? 'bg-[#1554c0] text-white shadow-sm hover:bg-[#1248a5]'
-                                : 'border border-[#1554c0]/15 bg-[#edf4ff] text-[#1554c0] hover:bg-[#e5efff] dark:border-[#6ba3ff]/15 dark:bg-[#172945] dark:text-[#6ba3ff]'
-                        }`}
-                    >
-                        {loading ? (
-                            <>
-                                <LoadingSpinner light={fullAccess || free} />
-                                Opening...
-                            </>
-                        ) : (
-                            <>
-                                {actionLabel}
-                                <Icon
-                                    name="arrow"
-                                    className="h-3.5 w-3.5"
-                                />
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
-        </Card>
-    )
-}
+/*
+|--------------------------------------------------------------------------
+| Page
+|--------------------------------------------------------------------------
+*/
 
 export default function Courses({
     student,
     stats,
     courses = [],
     catalogue = [],
-}: CoursesProps) {
-    const [loadingSlug, setLoadingSlug] = useState<string | null>(null)
+}: CoursesPageProps) {
+    const [search, setSearch] = useState('')
+
+    const [previewCourse, setPreviewCourse] =
+        useState<CatalogueCourse | null>(null)
+
+    const [
+        loadingCourseSlug,
+        setLoadingCourseSlug,
+    ] = useState<string | null>(null)
 
     /*
-     * The catalogue is deliberately NOT filtered by enrollment or payment.
-     *
-     * A student needs to discover paid courses before deciding to enroll.
-     * Access control happens on the course page/server, not by hiding
-     * products from the catalogue.
-     */
-    const enrolledCourses = courses
+    |--------------------------------------------------------------------------
+    | Catalogue search
+    |--------------------------------------------------------------------------
+    */
 
-    const enrolledIds = new Set(
-        enrolledCourses.map((course) => course.id),
-    )
+    const filteredCatalogue = useMemo(() => {
+        const query = search.trim().toLowerCase()
 
-    const discoverableCourses = catalogue.filter(
-        (course) => !enrolledIds.has(course.id),
-    )
+        if (!query) {
+            return catalogue
+        }
 
-    const openCourse = (
-        course: EnrolledCourse | CatalogueCourse,
+        return catalogue.filter((course) => {
+            const searchable = [
+                course.title,
+                course.category,
+                course.level,
+                course.short_description,
+                course.description,
+            ]
+
+            return searchable
+                .filter(
+                    (
+                        value,
+                    ): value is string =>
+                        typeof value === 'string',
+                )
+                .some((value) =>
+                    value
+                        .toLowerCase()
+                        .includes(query),
+                )
+        })
+    }, [catalogue, search])
+
+    /*
+    |--------------------------------------------------------------------------
+    | Continue learning
+    |--------------------------------------------------------------------------
+    */
+
+    const continueLearning = (
+        course: CurrentCourse,
     ) => {
-        if (loadingSlug !== null) {
+        if (loadingCourseSlug) {
             return
         }
 
-        setLoadingSlug(course.slug)
+        setLoadingCourseSlug(course.slug)
 
-        router.visit(`/courses/${course.slug}`, {
-            method: 'get',
-            preserveState: false,
-            preserveScroll: false,
+        router.visit(
+            `/courses/${encodeURIComponent(course.slug)}/learn`,
+            {
+                preserveScroll: false,
 
-            onFinish: () => {
-                setLoadingSlug(null)
+                onFinish: () => {
+                    setLoadingCourseSlug(null)
+                },
+
+                onError: () => {
+                    setLoadingCourseSlug(null)
+                },
             },
-        })
+        )
     }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Preview
+    |--------------------------------------------------------------------------
+    */
+
+    const openPreview = (
+        course: CatalogueCourse,
+    ) => {
+        setPreviewCourse(course)
+    }
+
+    const closePreview = () => {
+        setPreviewCourse(null)
+    }
+
+    const enrollCourse = (course: CatalogueCourse) => {
+        setLoadingCourseSlug(course.slug)
+
+        router.post(
+            `/courses/${encodeURIComponent(course.slug)}/enroll`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () =>
+                    setLoadingCourseSlug(null),
+            },
+        )
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Render
+    |--------------------------------------------------------------------------
+    */
 
     return (
         <StudentLayout
             student={student}
             stats={stats}
+            title="Courses"
+            searchCourses={courses}
         >
-            <Head title="My Courses" />
+            <Head title="Courses" />
 
-            <div className="space-y-8">
-                {/* Page heading */}
-                <div>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#1554c0] dark:text-[#6ba3ff]">
-                        Learning
-                    </p>
+            <div className="space-y-9">
 
-                    <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
-                        My Courses
-                    </h1>
+                {/* ========================================================
+                    PAGE HEADER
+                ======================================================== */}
 
-                    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                        Continue your learning or explore courses available
-                        on Learn With Flevian.
-                    </p>
-                </div>
+                <section>
+                    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1554c0] dark:text-[#6ba3ff]">
+                                Learning catalogue
+                            </p>
 
-                {/* Summary */}
-                <div className="grid gap-4 sm:grid-cols-3">
-                    <Card className="p-5">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    Enrolled courses
-                                </p>
+                            <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-slate-950 dark:text-white sm:text-3xl">
+                                Courses
+                            </h1>
 
-                                <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-                                    {stats.courses.total}
-                                </p>
-                            </div>
-
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#6ba3ff]">
-                                <Icon
-                                    name="book"
-                                    className="h-5 w-5"
-                                />
-                            </div>
+                            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                                Continue the courses you are already
+                                studying or explore the catalogue to
+                                discover your next course.
+                            </p>
                         </div>
-                    </Card>
 
-                    <Card className="p-5">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    Active learning
-                                </p>
+                        <div className="relative w-full lg:max-w-sm">
+                            <Icon
+                                name="search"
+                                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                            />
 
-                                <p className="mt-1 text-2xl font-bold text-[#1554c0] dark:text-[#6ba3ff]">
-                                    {stats.courses.active}
-                                </p>
-                            </div>
-
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#6ba3ff]">
-                                <Icon
-                                    name="play"
-                                    className="h-5 w-5"
-                                />
-                            </div>
+                            <input
+                                type="search"
+                                value={search}
+                                onChange={(event) =>
+                                    setSearch(
+                                        event.target.value,
+                                    )
+                                }
+                                placeholder="Search the course catalogue..."
+                                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-[#1554c0] focus:ring-2 focus:ring-[#1554c0]/10 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                            />
                         </div>
-                    </Card>
+                    </div>
+                </section>
 
-                    <Card className="p-5">
-                        <div className="flex items-center justify-between gap-3">
-                            <div>
-                                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    Available courses
-                                </p>
+                {/* ========================================================
+                    CURRENT COURSES
+                ======================================================== */}
 
-                                <p className="mt-1 text-2xl font-bold text-slate-950 dark:text-white">
-                                    {catalogue.length}
-                                </p>
-                            </div>
-
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#6ba3ff]">
-                                <Icon
-                                    name="grid"
-                                    className="h-5 w-5"
-                                />
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Continue learning */}
                 <section>
                     <SectionHeader
-                        title="Continue learning"
-                        description={
-                            enrolledCourses.length > 0
-                                ? 'Pick up where you left off.'
-                                : 'Your enrolled courses will appear here.'
+                        title="My Courses"
+                        description="Courses you are enrolled in, including courses awaiting access."
+                        action={
+                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
+                                <Icon
+                                    name="play"
+                                    className="h-4 w-4"
+                                />
+                            </div>
                         }
                     />
 
-                    {enrolledCourses.length > 0 ? (
-                        <div className="space-y-4">
-                            {enrolledCourses.map((course) => (
-                                <EnrolledCourseCard
-                                    key={course.id}
-                                    course={course}
-                                    loadingSlug={loadingSlug}
-                                    onOpen={openCourse}
-                                />
-                            ))}
+                    {courses.length > 0 ? (
+                        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+                            {courses.map((course) => {
+                                const progress =
+                                    clampProgress(
+                                        course.progress,
+                                    )
+
+                                const thumbnail =
+                                    assetUrl(
+                                        course.thumbnail_path,
+                                    )
+
+                                const isLoading =
+                                    loadingCourseSlug ===
+                                    course.slug
+
+                                const hasFullAccess =
+                                    course.access_granted ||
+                                    course.access_level === 'full'
+
+                                const isPendingAccess =
+                                    !hasFullAccess
+
+                                const actionLabel =
+                                    progress === 0
+                                        ? 'Start learning'
+                                        : progress >= 100
+                                          ? 'Review course'
+                                          : 'Continue learning'
+
+                                return (
+                                    <Card
+                                        key={course.id}
+                                        className="overflow-hidden p-0"
+                                    >
+                                        <div className="flex flex-col sm:flex-row">
+                                            <div className="h-44 shrink-0 bg-[#edf4ff] dark:bg-[#17243c] sm:h-auto sm:w-44">
+                                                {thumbnail ? (
+                                                    <img
+                                                        src={
+                                                            thumbnail
+                                                        }
+                                                        alt={
+                                                            course.title
+                                                        }
+                                                        className="h-full w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full items-center justify-center">
+                                                        <Icon
+                                                            name="book"
+                                                            className="h-8 w-8 text-[#1554c0] dark:text-[#6ba3ff]"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            <div className="min-w-0 flex-1 p-5">
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="min-w-0">
+                                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#1554c0] dark:text-[#6ba3ff]">
+                                                            {
+                                                                course.category ??
+                                                                'Course'
+                                                            }
+                                                        </p>
+
+                                                        <h3 className="mt-1 truncate text-base font-bold text-slate-950 dark:text-white">
+                                                            {
+                                                                course.title
+                                                            }
+                                                        </h3>
+                                                    </div>
+
+                                                    <span className="shrink-0 rounded-full bg-[#edf4ff] px-2.5 py-1 text-[10px] font-bold text-[#1554c0] dark:bg-[#172945] dark:text-[#6ba3ff]">
+                                                        {
+                                                            course.level
+                                                        }
+                                                    </span>
+                                                </div>
+
+                                                <div className="mt-5">
+                                                    <div className="flex items-center justify-between text-[10px] font-semibold">
+                                                        <span className="text-slate-400">
+                                                            Progress
+                                                        </span>
+
+                                                        <span className="text-[#1554c0] dark:text-[#6ba3ff]">
+                                                            {
+                                                                progress
+                                                            }
+                                                            %
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                                                        <div
+                                                            className="h-full rounded-full bg-gradient-to-r from-[#1554c0] to-[#6a5cff] transition-all"
+                                                            style={{
+                                                                width: `${progress}%`,
+                                                            }}
+                                                        />
+                                                    </div>
+
+                                                    <p className="mt-2 text-[10px] text-slate-400">
+                                                        {
+                                                            course.completed_lessons
+                                                        }{" "}
+                                                        of{" "}
+                                                        {
+                                                            course.total_lessons
+                                                        }{" "}
+                                                        lessons completed
+                                                    </p>
+                                                </div>
+
+                                                {isPendingAccess ? (
+                                                    <button
+                                                        type="button"
+                                                        disabled
+                                                        className="mt-5 flex w-full cursor-not-allowed items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs font-semibold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300"
+                                                    >
+                                                        <span className="flex items-center gap-2">
+                                                            <Icon
+                                                                name="clock"
+                                                                className="h-3.5 w-3.5"
+                                                            />
+                                                            Pending access
+                                                        </span>
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        disabled={
+                                                            isLoading
+                                                        }
+                                                        onClick={() =>
+                                                            continueLearning(
+                                                                course,
+                                                            )
+                                                        }
+                                                        className="mt-5 flex w-full items-center justify-between rounded-xl bg-slate-50 px-3.5 py-3 text-xs font-semibold text-slate-700 transition hover:bg-[#1554c0] hover:text-white disabled:cursor-wait disabled:opacity-70 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-[#4c8dff] dark:hover:text-[#07101f]"
+                                                    >
+                                                        <span className="flex items-center gap-2">
+                                                            {isLoading ? (
+                                                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-slate-300 border-t-[#1554c0]" />
+                                                            ) : (
+                                                                <Icon
+                                                                    name="play"
+                                                                    className="h-3.5 w-3.5"
+                                                                />
+                                                            )}
+
+                                                            {isLoading
+                                                                ? 'Opening course...'
+                                                                : actionLabel}
+                                                        </span>
+
+                                                        {!isLoading && (
+                                                            <Icon
+                                                                name="arrow"
+                                                                className="h-3.5 w-3.5"
+                                                            />
+                                                        )}
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                )
+                            })}
                         </div>
                     ) : (
-                        <EmptyState
-                            icon="book"
-                            title="No courses yet"
-                            description="Explore the catalogue below to find a course you would like to take."
-                        />
+                        <div className="mt-4">
+                            <EmptyState
+                                icon="book"
+                                title="No enrolled courses yet"
+                                description="Once you enroll in a course, it will appear here with its learning progress and access status."
+                                action={
+                                    <a
+                                        href="#course-catalogue"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-[#1554c0] px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#1048a8]"
+                                    >
+                                        Explore courses
+                                        <Icon
+                                            name="arrow"
+                                            className="h-3.5 w-3.5"
+                                        />
+                                    </a>
+                                }
+                            />
+                        </div>
                     )}
                 </section>
 
-                {/* Catalogue */}
-                <section>
+                {/* ========================================================
+                    CATALOGUE
+                ======================================================== */}
+
+                <section id="course-catalogue">
                     <SectionHeader
-                        title="Explore courses"
-                        description="Browse all published courses. Preview a course before getting full access."
+                        title="Course catalogue"
+                        description="Explore published courses, preview their curriculum, and choose what you want to learn next."
+                        action={
+                            <div className="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400 sm:flex">
+                                {filteredCatalogue.length}{" "}
+                                courses
+                            </div>
+                        }
                     />
 
-                    {discoverableCourses.length > 0 ? (
-                        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-                            {discoverableCourses.map((course) => (
-                                <CatalogueCourseCard
-                                    key={course.id}
-                                    course={course}
-                                    loadingSlug={loadingSlug}
-                                    onOpen={openCourse}
-                                />
-                            ))}
+                    {filteredCatalogue.length > 0 ? (
+                        <div className="mt-4 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                            {filteredCatalogue.map(
+                                (course) => {
+                                    const thumbnail =
+                                        assetUrl(
+                                            course.thumbnail_path,
+                                        )
+
+                                    const isFullAccess =
+                                        course.access_granted ||
+                                        course.access_level === 'full'
+
+                                    const isPendingAccess =
+                                        course.enrolled && !isFullAccess
+
+                                    return (
+                                        <Card
+                                            key={course.id}
+                                            className="group overflow-hidden p-0 transition hover:-translate-y-0.5 hover:shadow-lg"
+                                        >
+                                            <div className="relative h-44 overflow-hidden bg-gradient-to-br from-[#1554c0] to-[#6a5cff]">
+                                                {thumbnail ? (
+                                                    <img
+                                                        src={
+                                                            thumbnail
+                                                        }
+                                                        alt={
+                                                            course.title
+                                                        }
+                                                        className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-full items-center justify-center">
+                                                        <Icon
+                                                            name="book"
+                                                            className="h-10 w-10 text-white/80"
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                <div className="absolute inset-x-0 top-0 flex items-start justify-between p-4">
+                                                    <span className="rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold text-slate-700">
+                                                        {course.level ??
+                                                            'All levels'}
+                                                    </span>
+
+                                                    <span className="rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold text-slate-700">
+                                                        {course.access_type ===
+                                                        'free'
+                                                            ? 'Free'
+                                                            : formatPrice(
+                                                                  course.price,
+                                                                  course.currency,
+                                                              )}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="p-5">
+                                                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#1554c0] dark:text-[#6ba3ff]">
+                                                    {
+                                                        course.category ??
+                                                        'Course'
+                                                    }
+                                                </p>
+
+                                                <h3 className="mt-1.5 line-clamp-2 text-base font-bold text-slate-950 dark:text-white">
+                                                    {
+                                                        course.title
+                                                    }
+                                                </h3>
+
+                                                <p className="mt-2 line-clamp-3 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                    {
+                                                        course.short_description ??
+                                                        course.description ??
+                                                        'Explore this course and discover what you will learn.'
+                                                    }
+                                                </p>
+
+                                                <div className="mt-4 flex items-center gap-3 text-[10px] font-medium text-slate-400">
+                                                    <span>
+                                                        {
+                                                            course.module_count
+                                                        }{" "}
+                                                        {course.module_count ===
+                                                        1
+                                                            ? 'module'
+                                                            : 'modules'}
+                                                    </span>
+
+                                                    <span>
+                                                        •
+                                                    </span>
+
+                                                    <span>
+                                                        {
+                                                            course.lesson_count
+                                                        }{" "}
+                                                        {course.lesson_count ===
+                                                        1
+                                                            ? 'lesson'
+                                                            : 'lessons'}
+                                                    </span>
+
+                                                    {course.preview_available && (
+                                                        <>
+                                                            <span>
+                                                                •
+                                                            </span>
+
+                                                            <span className="text-[#1554c0] dark:text-[#6ba3ff]">
+                                                                {
+                                                                    course.preview_lesson_count
+                                                                }{" "}
+                                                                preview
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-5 flex gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openPreview(
+                                                                course,
+                                                            )
+                                                        }
+                                                        className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-[#1554c0]/30 hover:bg-[#edf4ff] hover:text-[#1554c0] dark:border-slate-700 dark:text-slate-300 dark:hover:border-[#6ba3ff]/30 dark:hover:bg-[#172945] dark:hover:text-[#6ba3ff]"
+                                                    >
+                                                        <Icon
+                                                            name="book"
+                                                            className="h-3.5 w-3.5"
+                                                        />
+                                                        Preview
+                                                    </button>
+
+                                                    {isFullAccess ? (
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                loadingCourseSlug ===
+                                                                course.slug
+                                                            }
+                                                            onClick={() => {
+                                                                const currentCourse =
+                                                                    courses.find(
+                                                                        (item) =>
+                                                                            item.id ===
+                                                                            course.id,
+                                                                    )
+
+                                                                if (currentCourse) {
+                                                                    continueLearning(
+                                                                        currentCourse,
+                                                                    )
+                                                                    return
+                                                                }
+
+                                                                setLoadingCourseSlug(
+                                                                    course.slug,
+                                                                )
+
+                                                                router.visit(
+                                                                    `/courses/${encodeURIComponent(course.slug)}/learn`,
+                                                                    {
+                                                                        onFinish: () =>
+                                                                            setLoadingCourseSlug(
+                                                                                null,
+                                                                            ),
+                                                                        onError: () =>
+                                                                            setLoadingCourseSlug(
+                                                                                null,
+                                                                            ),
+                                                                    },
+                                                                )
+                                                            }}
+                                                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#1554c0] px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-[#1048a8] disabled:cursor-wait disabled:opacity-70"
+                                                        >
+                                                            {loadingCourseSlug ===
+                                                            course.slug ? (
+                                                                <>
+                                                                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                                                    Opening...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Icon
+                                                                        name="play"
+                                                                        className="h-3.5 w-3.5"
+                                                                    />
+                                                                    Continue learning
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    ) : isPendingAccess ? (
+                                                        <button
+                                                            type="button"
+                                                            disabled
+                                                            className="flex flex-1 cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-300"
+                                                        >
+                                                            <Icon
+                                                                name="clock"
+                                                                className="h-3.5 w-3.5"
+                                                            />
+                                                            Pending access
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            disabled={
+                                                                loadingCourseSlug ===
+                                                                course.slug
+                                                            }
+                                                            onClick={() =>
+                                                                enrollCourse(
+                                                                    course,
+                                                                )
+                                                            }
+                                                            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#1554c0] px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-[#1048a8] disabled:cursor-wait disabled:opacity-70"
+                                                        >
+                                                            {loadingCourseSlug ===
+                                                            course.slug ? (
+                                                                <>
+                                                                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                                                    Enrolling...
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Icon
+                                                                        name="play"
+                                                                        className="h-3.5 w-3.5"
+                                                                    />
+                                                                    Enroll
+                                                                </>
+                                                            )}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    )
+                                },
+                            )}
                         </div>
                     ) : (
-                        <EmptyState
-                            icon="book"
-                            title="No additional courses"
-                            description="There are no other published courses available right now."
-                        />
+                        <div className="mt-4">
+                            <EmptyState
+                                icon="search"
+                                title="No courses match your search"
+                                description="Try another course name, category, or skill."
+                                action={
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setSearch(
+                                                '',
+                                            )
+                                        }
+                                        className="rounded-xl bg-[#1554c0] px-4 py-2.5 text-xs font-semibold text-white hover:bg-[#1048a8]"
+                                    >
+                                        Clear search
+                                    </button>
+                                }
+                            />
+                        </div>
                     )}
                 </section>
             </div>
+
+            {/* ============================================================
+                PREVIEW MODAL
+            ============================================================ */}
+
+            {previewCourse && (
+                <div
+                    className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="course-preview-title"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target ===
+                            event.currentTarget
+                        ) {
+                            closePreview()
+                        }
+                    }}
+                >
+                    <div
+                        className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.25)] dark:border-slate-700 dark:bg-[#101827]"
+                        onMouseDown={(event) =>
+                            event.stopPropagation()
+                        }
+                    >
+                        {/* Header */}
+                        <div className="flex items-start justify-between border-b border-slate-100 px-6 py-5 dark:border-slate-800">
+                            <div className="min-w-0 pr-5">
+                                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1554c0] dark:text-[#6ba3ff]">
+                                    Course preview
+                                </p>
+
+                                <h2
+                                    id="course-preview-title"
+                                    className="mt-1.5 text-xl font-bold tracking-tight text-slate-950 dark:text-white"
+                                >
+                                    {
+                                        previewCourse.title
+                                    }
+                                </h2>
+
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-medium text-slate-400">
+                                    <span>
+                                        {
+                                            previewCourse.module_count
+                                        }{" "}
+                                        modules
+                                    </span>
+
+                                    <span>
+                                        •
+                                    </span>
+
+                                    <span>
+                                        {
+                                            previewCourse.lesson_count
+                                        }{" "}
+                                        lessons
+                                    </span>
+
+                                    {previewCourse.preview_lesson_count >
+                                        0 && (
+                                        <>
+                                            <span>
+                                                •
+                                            </span>
+
+                                            <span className="font-semibold text-[#1554c0] dark:text-[#6ba3ff]">
+                                                {
+                                                    previewCourse.preview_lesson_count
+                                                }{" "}
+                                                available
+                                                to preview
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    closePreview
+                                }
+                                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+                                aria-label="Close preview"
+                            >
+                                <Icon
+                                    name="x"
+                                    className="h-4 w-4"
+                                />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="flex-1 overflow-y-auto px-6 py-6">
+                            <div className="grid gap-6 lg:grid-cols-[1fr_260px]">
+                                <div>
+                                    <h3 className="text-sm font-bold text-slate-950 dark:text-white">
+                                        About this course
+                                    </h3>
+
+                                    <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                                        {
+                                            previewCourse.description ??
+                                            previewCourse.short_description ??
+                                            'Explore this course to understand what you will learn.'
+                                        }
+                                    </p>
+
+                                    <div className="mt-6">
+                                        <div className="flex items-end justify-between gap-4">
+                                            <div>
+                                                <h3 className="text-sm font-bold text-slate-950 dark:text-white">
+                                                    What you will
+                                                    see
+                                                </h3>
+
+                                                <p className="mt-1 text-xs text-slate-400">
+                                                    A small preview
+                                                    of the learning
+                                                    curriculum.
+                                                </p>
+                                            </div>
+
+                                            <span className="text-[10px] font-semibold text-slate-400">
+                                                Preview only
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-4 space-y-3">
+                                            {previewCourse.preview_modules.map(
+                                                (
+                                                    module,
+                                                    moduleIndex,
+                                                ) => (
+                                                    <div
+                                                        key={
+                                                            module.id
+                                                        }
+                                                        className="rounded-2xl border border-slate-200 dark:border-slate-800"
+                                                    >
+                                                        <div className="flex gap-3 p-4">
+                                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-xs font-bold text-[#1554c0] dark:bg-[#172945] dark:text-[#6ba3ff]">
+                                                                {moduleIndex +
+                                                                    1}
+                                                            </div>
+
+                                                            <div className="min-w-0 flex-1">
+                                                                <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                                                                    {
+                                                                        module.title
+                                                                    }
+                                                                </h4>
+
+                                                                {module.description && (
+                                                                    <p className="mt-1 text-xs leading-5 text-slate-400">
+                                                                        {
+                                                                            module.description
+                                                                        }
+                                                                    </p>
+                                                                )}
+
+                                                                <div className="mt-3 space-y-2">
+                                                                    {module.lessons
+                                                                        .slice(
+                                                                            0,
+                                                                            4,
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                lesson,
+                                                                            ) => (
+                                                                                <div
+                                                                                    key={
+                                                                                        lesson.id
+                                                                                    }
+                                                                                    className="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-slate-900/70"
+                                                                                >
+                                                                                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white text-[#1554c0] shadow-sm dark:bg-slate-800 dark:text-[#6ba3ff]">
+                                                                                        <Icon
+                                                                                            name="play"
+                                                                                            className="h-3 w-3"
+                                                                                        />
+                                                                                    </div>
+
+                                                                                    <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700 dark:text-slate-200">
+                                                                                        {
+                                                                                            lesson.title
+                                                                                        }
+                                                                                    </span>
+
+                                                                                    {lesson.duration_minutes !==
+                                                                                        null && (
+                                                                                        <span className="text-[10px] text-slate-400">
+                                                                                            {
+                                                                                                lesson.duration_minutes
+                                                                                            }{" "}
+                                                                                            min
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            ),
+                                                                        )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ),
+                                            )}
+
+                                            {previewCourse.preview_modules.length ===
+                                                0 && (
+                                                <div className="rounded-2xl border border-dashed border-slate-300 px-5 py-8 text-center dark:border-slate-700">
+                                                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                                        Preview
+                                                        content
+                                                        coming soon
+                                                    </p>
+
+                                                    <p className="mt-1 text-xs text-slate-400">
+                                                        The course is
+                                                        published, but
+                                                        no preview
+                                                        lessons have
+                                                        been configured
+                                                        yet.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                            Course details
+                                        </p>
+
+                                        <div className="mt-4 space-y-4">
+                                            <div>
+                                                <p className="text-[10px] text-slate-400">
+                                                    Level
+                                                </p>
+
+                                                <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                                    {
+                                                        previewCourse.level ??
+                                                        'All levels'
+                                                    }
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[10px] text-slate-400">
+                                                    Category
+                                                </p>
+
+                                                <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                                    {
+                                                        previewCourse.category ??
+                                                        'General'
+                                                    }
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[10px] text-slate-400">
+                                                    Full course
+                                                </p>
+
+                                                <p className="mt-0.5 text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                                    {
+                                                        previewCourse.module_count
+                                                    }{" "}
+                                                    modules
+                                                </p>
+
+                                                <p className="mt-0.5 text-xs text-slate-400">
+                                                    {
+                                                        previewCourse.lesson_count
+                                                    }{" "}
+                                                    total lessons
+                                                </p>
+                                            </div>
+
+                                            <div>
+                                                <p className="text-[10px] text-slate-400">
+                                                    Course fee
+                                                </p>
+
+                                                <p className="mt-0.5 text-lg font-bold text-slate-950 dark:text-white">
+                                                    {previewCourse.access_type ===
+                                                    'free'
+                                                        ? 'Free'
+                                                        : formatPrice(
+                                                              previewCourse.price,
+                                                              previewCourse.currency,
+                                                          )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {previewCourse.preview_lesson_count <
+                                        previewCourse.lesson_count && (
+                                        <div className="mt-3 rounded-2xl border border-[#1554c0]/10 bg-[#edf4ff] p-4 dark:border-[#6ba3ff]/10 dark:bg-[#172945]">
+                                            <p className="text-xs font-bold text-[#1554c0] dark:text-[#6ba3ff]">
+                                                Preview access
+                                            </p>
+
+                                            <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                                                You are seeing selected
+                                                lessons only. The complete
+                                                curriculum and protected
+                                                learning materials become
+                                                available with full access.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex flex-col gap-3 border-t border-slate-100 bg-white px-6 py-4 dark:border-slate-800 dark:bg-[#101827] sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs text-slate-400">
+                                Preview the course before deciding
+                                whether it is right for you.
+                            </p>
+
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={
+                                        closePreview
+                                    }
+                                    className="rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                                >
+                                    Close
+                                </button>
+
+                                <a
+                                    href={`/courses/${previewCourse.slug}`}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-[#1554c0] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#1048a8]"
+                                >
+                                    View course
+                                    <Icon
+                                        name="arrow"
+                                        className="h-3.5 w-3.5"
+                                    />
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </StudentLayout>
     )
 }

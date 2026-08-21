@@ -14,9 +14,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Audit tracking must wrap the Inertia middleware so that it sees
+        // the finalized HTTP response, not an Inertia\\Response object.
+        $middleware->web(prepend: [
+            TrackAuditActivity::class,
+        ]);
+
         $middleware->web(append: [
             HandleInertiaRequests::class,
-            TrackAuditActivity::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

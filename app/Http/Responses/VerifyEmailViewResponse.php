@@ -4,7 +4,7 @@ namespace App\Http\Responses;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response;
 use Laravel\Fortify\Contracts\VerifyEmailViewResponse as VerifyEmailViewResponseContract;
 
 class VerifyEmailViewResponse implements VerifyEmailViewResponseContract
@@ -16,6 +16,6 @@ class VerifyEmailViewResponse implements VerifyEmailViewResponseContract
     {
         return Inertia::render('Auth/VerifyEmail', [
             'status' => session('status'),
-        ]);
+        ])->toResponse($request);
     }
 }

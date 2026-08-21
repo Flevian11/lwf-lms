@@ -14,18 +14,16 @@ class CourseAccessService
     /**
      * Determine the student's effective course access level.
      *
-     * free    = free course, full access
-     * full    = paid course with granted access
-     * preview = paid course without granted access
+     * full    = enrolled course with granted access
+     * preview = course without granted access
+
+     * A course being free determines how enrollment is created; it does
+     * not by itself grant learning access.
      */
     public function accessLevel(
         User $user,
         Course $course,
     ): string {
-        if ($this->isFreeCourse($course)) {
-            return 'free';
-        }
-
         return $this->hasGrantedEnrollment($user, $course)
             ? 'full'
             : 'preview';
@@ -38,11 +36,7 @@ class CourseAccessService
         User $user,
         Course $course,
     ): bool {
-        return in_array(
-            $this->accessLevel($user, $course),
-            ['free', 'full'],
-            true,
-        );
+        return $this->accessLevel($user, $course) === 'full';
     }
 
     /**
@@ -67,7 +61,7 @@ class CourseAccessService
     /**
      * Determine whether a module can be opened.
      *
-     * Free courses and granted paid courses are unrestricted.
+     * Granted courses are unrestricted.
      *
      * Otherwise the module must explicitly be configured
      * as preview content.

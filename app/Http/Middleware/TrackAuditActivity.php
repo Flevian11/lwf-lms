@@ -15,25 +15,32 @@ class TrackAuditActivity
     ) {
     }
 
+    /**
+     * Keep the middleware completely transparent to Laravel/Inertia.
+     *
+     * Route controllers may return Responsable objects such as
+     * Inertia\Response. Laravel converts those to a real HTTP response
+     * after the middleware pipeline. We therefore do not inspect or wrap
+     * the controller response here.
+     */
     public function handle(
         Request $request,
         Closure $next,
-    ): Response {
-        $response = $next($request);
+    ): mixed {
+        return $next($request);
+    }
 
-        /*
-         * Only audit successful/normal web requests.
-         *
-         * We intentionally skip:
-         * - asset requests
-         * - Vite development requests
-         * - prefetch requests
-         * - non-GET requests
-         *
-         * Security/business events such as login, logout, payments,
-         * submissions and session revocation will be recorded explicitly
-         * by their respective application services/controllers.
-         */
+    /**
+     * Record the page view after Laravel has finalized the response.
+     *
+     * At this point the response is a real Symfony response, so Inertia,
+     * Fortify and normal Laravel responses are handled uniformly.
+     * Audit failures are deliberately isolated from the user request.
+     */
+    public function terminate(
+        Request $request,
+        Response $response,
+    ): void {
         if (
             $request->isMethod('GET')
             && $this->shouldTrack($request, $response)
@@ -54,16 +61,9 @@ class TrackAuditActivity
                     ],
                 );
             } catch (Throwable) {
-                /*
-                 * Audit logging must never break the user's request.
-                 *
-                 * The application response has already been generated,
-                 * so an audit failure is deliberately isolated here.
-                 */
+                // Audit logging must never break the completed request.
             }
         }
-
-        return $response;
     }
 
     protected function shouldTrack(

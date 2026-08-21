@@ -1,7 +1,9 @@
 <?php
 
+use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailTwoFactorController;
 use App\Http\Controllers\OnboardingController;
@@ -57,6 +59,23 @@ Route::get('/reset-password', function () {
 })->name('password.reset.start');
 
 /*
+ |--------------------------------------------------------------------------
+ | Signed assignment submission downloads
+ |--------------------------------------------------------------------------
+ |
+ | Email confirmation messages use a temporary signed URL so a student can
+ | download the exact file they submitted without needing a second login.
+ | The signature is the authorization boundary for this endpoint.
+ |
+ */
+Route::get('/assignments/{assignment}/submissions/{submission}/download/email', [
+    AssignmentController::class,
+    'downloadFromEmail',
+])->whereNumber(['assignment', 'submission'])
+    ->middleware('signed')
+    ->name('assignments.submissions.email-download');
+
+/*
 |--------------------------------------------------------------------------
 | Email Two-Factor Authentication Challenge
 |--------------------------------------------------------------------------
@@ -85,11 +104,11 @@ Route::middleware(['guest'])->group(function (): void {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth', 'verified'])->group(function (): void {
+Route::middleware(['auth'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Main Dashboard
+    | Dashboard
     |--------------------------------------------------------------------------
     */
 
@@ -98,11 +117,47 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Student Support
+    | Assignments
     |--------------------------------------------------------------------------
     |
-    | Support uses the same student/stats contract as the dashboard.
+    | Students can only see and submit assignments belonging to courses
+    | where they have an active enrollment with granted access.
     |
+    */
+
+    Route::get('/assignments', [
+        AssignmentController::class,
+        'index',
+    ])->name('assignments.index');
+
+    Route::get('/assignments/{assignment}', [
+        AssignmentController::class,
+        'show',
+    ])->whereNumber('assignment')
+        ->name('assignments.show');
+
+    Route::post('/assignments/{assignment}/submit', [
+        AssignmentController::class,
+        'submit',
+    ])->whereNumber('assignment')
+        ->name('assignments.submit');
+
+    Route::get('/assignments/{assignment}/submissions/{submission}/download', [
+        AssignmentController::class,
+        'download',
+    ])->whereNumber(['assignment', 'submission'])
+        ->name('assignments.submissions.download');
+
+    Route::get('/assignments/{assignment}/submissions/{submission}/transcript', [
+        AssignmentController::class,
+        'transcript',
+    ])->whereNumber(['assignment', 'submission'])
+        ->name('assignments.submissions.transcript');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Student Support
+    |--------------------------------------------------------------------------
     */
 
     Route::get('/support', function (
@@ -124,7 +179,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Student Profile
+    | Profile
     |--------------------------------------------------------------------------
     */
 
@@ -140,7 +195,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Security Settings
+    | Security
     |--------------------------------------------------------------------------
     */
 
@@ -149,17 +204,12 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Student Course Catalogue
+    | Course Catalogue
     |--------------------------------------------------------------------------
     |
-    | This page shows the complete published course catalogue.
+    | Shows all published courses.
     |
-    | IMPORTANT:
-    | A student who has not paid for a paid course must STILL be able
-    | to see that course in the catalogue.
-    |
-    | Payment/access restrictions are enforced when opening the course
-    | and attempting to access protected learning content.
+    | Payment status does NOT hide courses from the catalogue.
     |
     */
 
@@ -168,23 +218,36 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Individual Course
+    | Protected Course Learning
     |--------------------------------------------------------------------------
     |
-    | This is the course detail / preview / learning page.
+    | IMPORTANT:
     |
-    | CourseController determines the effective access level:
+    | This route comes BEFORE /courses/{slug}.
     |
-    |   free
-    |       Full access.
+    | CourseController::learn() performs the server-side access check.
     |
-    |   full
-    |       Paid course with payment or administrative approval.
+    */
+
+    Route::post('/courses/{slug}/enroll', [
+        CourseEnrollmentController::class,
+        'store',
+    ])->name('courses.enroll');
+
+    Route::get('/courses/{slug}/learn', [
+        CourseController::class,
+        'learn',
+    ])->name('courses.learn');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Course Overview
+    |--------------------------------------------------------------------------
     |
-    |   preview
-    |       Course information and explicitly configured preview content.
+    | Safe course information / overview endpoint.
     |
-    | The frontend does NOT decide authorization.
+    | The frontend preview now uses catalogue data directly, but this
+    | endpoint remains useful for direct course overview pages.
     |
     */
 
@@ -195,7 +258,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Individual Authenticated Session / Device Revocation
+    | Session / Device Security
     |--------------------------------------------------------------------------
     */
 
@@ -204,15 +267,6 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         'destroy',
     ])->name('security.sessions.destroy');
 
-    /*
-    |--------------------------------------------------------------------------
-    | Revoke All Other Sessions
-    |--------------------------------------------------------------------------
-    |
-    | Preserves the current device/session.
-    |
-    */
-
     Route::post('/security/sessions/revoke-others', [
         UserSessionController::class,
         'destroyOthers',
@@ -220,7 +274,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
-    | Student Onboarding
+    | Onboarding
     |--------------------------------------------------------------------------
     */
 

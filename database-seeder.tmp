@@ -182,7 +182,7 @@ class DemoCourseSeeder extends Seeder
         });
 
         $this->command?->info('Demo course catalogue created successfully: 10 courses, expanded topics, lessons and materials.');
-        $this->command?->info('Ramp Wanjohi was enrolled in Web Development Fundamentals only. Other free demo courses remain available for enrollment testing.');
+        $this->command?->info('Ramp Wanjohi was enrolled in the free demo courses.');
     }
 
     private function courses(): array
@@ -380,7 +380,7 @@ class DemoCourseSeeder extends Seeder
                 'level' => 'beginner',
                 'access_type' => 'free',
                 'price' => 0,
-                'free_for_demo_student' => false,
+                'free_for_demo_student' => true,
                 'modules' => [
                     $this->module('Git Fundamentals', 'Understand repositories, commits, branches and the Git working tree.', [
                         $this->lesson('Repositories and Commits', 'article', 18, '<h2>Git Repositories</h2><p>Understand working trees, staging and commits.</p>', true),
@@ -491,7 +491,7 @@ class DemoCourseSeeder extends Seeder
                 'level' => 'beginner',
                 'access_type' => 'free',
                 'price' => 0,
-                'free_for_demo_student' => false,
+                'free_for_demo_student' => true,
                 'modules' => [
                     $this->module('UX Foundations', 'Understand users, goals, flows and common usability principles.', [
                         $this->lesson('Users and Goals', 'article', 18, '<h2>Users and Goals</h2><p>Start interface decisions from user needs and measurable goals.</p>', true),

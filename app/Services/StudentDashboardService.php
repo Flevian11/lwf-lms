@@ -153,13 +153,21 @@ class StudentDashboardService
     }
 
     /**
-     * Current and longest learning streak.
+     * Calculate the student's learning streak from the authoritative
+     * learning-activity history. The dashboard must never display a stale
+     * cached streak when new activity has already been recorded.
      */
     private function streakStats(User $user): array
     {
-        $streak = $user->studentStreak;
+        $dates = $user->learningActivities()
+            ->whereNotNull('occurred_at')
+            ->orderBy('occurred_at')
+            ->pluck('occurred_at')
+            ->map(fn ($occurredAt) => $occurredAt->copy()->startOfDay())
+            ->unique(fn ($date) => $date->toDateString())
+            ->values();
 
-        if ($streak === null) {
+        if ($dates->isEmpty()) {
             return [
                 'current' => 0,
                 'longest' => 0,
@@ -167,10 +175,45 @@ class StudentDashboardService
             ];
         }
 
+        $today = now()->startOfDay();
+        $lastActivity = $dates->last();
+        $current = 0;
+
+        // A streak is alive only when the latest learning activity happened
+        // today or yesterday. This prevents an old streak from remaining
+        // visible indefinitely.
+        if ($lastActivity->diffInDays($today) <= 1) {
+            $current = 1;
+            $cursor = $lastActivity->copy();
+
+            for ($index = $dates->count() - 2; $index >= 0; $index--) {
+                $previous = $dates[$index];
+
+                if ($cursor->diffInDays($previous) !== 1) {
+                    break;
+                }
+
+                $current++;
+                $cursor = $previous;
+            }
+        }
+
+        $longest = 1;
+        $run = 1;
+
+        for ($index = 1; $index < $dates->count(); $index++) {
+            if ($dates[$index]->diffInDays($dates[$index - 1]) === 1) {
+                $run++;
+                $longest = max($longest, $run);
+            } else {
+                $run = 1;
+            }
+        }
+
         return [
-            'current' => $streak->current_streak_days,
-            'longest' => $streak->longest_streak_days,
-            'last_activity_on' => $streak->last_activity_on?->toDateString(),
+            'current' => $current,
+            'longest' => $longest,
+            'last_activity_on' => $lastActivity->toDateString(),
         ];
     }
 
@@ -384,9 +427,8 @@ class StudentDashboardService
                     /*
                      * Effective access:
                      *
-                     * free    = free course
-                     * full    = paid course with granted access
-                     * preview = paid course awaiting access
+                      * full    = enrolled course with granted access
+                     * preview = course awaiting access
                      */
                     'access_level' => $accessLevel,
 
