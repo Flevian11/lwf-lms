@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\Quiz;
+use App\Models\QuizAttempt;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -486,26 +488,28 @@ class StudentDashboardService
     }
 
     /**
-     * Upcoming assignments belonging to courses the student is enrolled in.
+     * Upcoming assignments specifically allocated to the student and not yet submitted.
+     *
+     * An assignment is not upcoming once the student has a submitted/graded attempt.
+     * Drafts remain actionable because the student can still continue working on them.
      */
     private function upcomingAssignments(User $user): array
     {
-        $courseIds = $user->courseEnrollments()
-            ->where('status', 'active')
-            ->pluck('course_id');
-
-        if ($courseIds->isEmpty()) {
-            return [];
-        }
-
         return \App\Models\Assignment::query()
             ->with(['course'])
-            ->whereIn('course_id', $courseIds)
+            ->whereHas('allocations', fn ($query) =>
+                $query->where('user_id', $user->id)
+            )
             ->where('status', 'published')
             ->where(function ($query) {
                 $query
                     ->whereNull('due_at')
                     ->orWhere('due_at', '>=', now());
+            })
+            ->whereDoesntHave('submissions', function ($query) use ($user) {
+                $query
+                    ->where('user_id', $user->id)
+                    ->whereIn('status', ['submitted', 'graded', 'late']);
             })
             ->orderByRaw('due_at IS NULL')
             ->orderBy('due_at')
@@ -525,18 +529,23 @@ class StudentDashboardService
 
     /**
      * Upcoming quizzes belonging to courses the student is enrolled in.
+     *
+     * A quiz is only "upcoming" while it still requires action. Passed
+     * quizzes and quizzes whose attempts are exhausted are intentionally
+     * removed from this dashboard section.
      */
     private function upcomingQuizzes(User $user): array
     {
         $courseIds = $user->courseEnrollments()
             ->where('status', 'active')
+            ->whereNotNull('access_granted_at')
             ->pluck('course_id');
 
         if ($courseIds->isEmpty()) {
             return [];
         }
 
-        return \App\Models\Quiz::query()
+        $quizzes = Quiz::query()
             ->with(['course'])
             ->whereIn('course_id', $courseIds)
             ->where('status', 'published')
@@ -545,11 +554,55 @@ class StudentDashboardService
                     ->whereNull('due_at')
                     ->orWhere('due_at', '>=', now());
             })
+            ->where(function ($query) {
+                $query
+                    ->whereNull('available_from')
+                    ->orWhere('available_from', '<=', now());
+            })
             ->orderByRaw('due_at IS NULL')
             ->orderBy('due_at')
-            ->limit(5)
+            ->limit(20)
+            ->get();
+
+        if ($quizzes->isEmpty()) {
+            return [];
+        }
+
+        $quizIds = $quizzes->pluck('id');
+
+        $latestAttempts = QuizAttempt::query()
+            ->where('user_id', $user->id)
+            ->whereIn('quiz_id', $quizIds)
+            ->orderByDesc('attempt_number')
             ->get()
-            ->map(fn ($quiz) => [
+            ->groupBy('quiz_id')
+            ->map(fn ($items) => $items->first());
+
+        $attemptCounts = QuizAttempt::query()
+            ->where('user_id', $user->id)
+            ->whereIn('quiz_id', $quizIds)
+            ->whereIn('status', ['submitted', 'graded'])
+            ->selectRaw('quiz_id, COUNT(*) as attempts_used')
+            ->groupBy('quiz_id')
+            ->pluck('attempts_used', 'quiz_id');
+
+        return $quizzes
+            ->filter(function (Quiz $quiz) use ($latestAttempts, $attemptCounts): bool {
+                $latest = $latestAttempts->get($quiz->id);
+                $used = (int) ($attemptCounts[$quiz->id] ?? 0);
+
+                if ($latest?->passed === true) {
+                    return false;
+                }
+
+                if ($quiz->max_attempts !== null && $used >= $quiz->max_attempts) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->take(5)
+            ->map(fn (Quiz $quiz) => [
                 'id' => $quiz->id,
                 'title' => $quiz->title,
                 'course' => $quiz->course?->title,

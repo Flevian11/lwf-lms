@@ -292,6 +292,15 @@ export default function Assignments({ student, stats, assignments = [] }: Props)
                                 </div>
                             </section>
                         ) : null}
+                        {!assignments.length ? (
+                            <div>
+                                <EmptyState
+                                    icon="assignment"
+                                    title="No assignments yet"
+                                    description="When an instructor allocates an assignment to you in a course you can access, it will appear here."
+                                />
+                            </div>
+                        ) : null}
                     </div>
 
                     <aside className="space-y-4">
@@ -368,16 +377,6 @@ export default function Assignments({ student, stats, assignments = [] }: Props)
                         </Card>
                     </aside>
                 </div>
-
-                {!assignments.length ? (
-                    <div className="mt-6">
-                        <EmptyState
-                            icon="assignment"
-                            title="No assignments yet"
-                            description="When an instructor allocates an assignment to you in a course you can access, it will appear here."
-                        />
-                    </div>
-                ) : null}
 
                 {assignments.length ? (
                     <p className="mt-7 text-center text-[10px] text-slate-400">

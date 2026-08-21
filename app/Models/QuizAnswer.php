@@ -14,6 +14,7 @@ class QuizAnswer extends Model
         'attempt_id',
         'question_id',
         'selected_option_id',
+        'selected_option_ids',
         'answer_text',
         'is_correct',
         'points_awarded',
@@ -24,6 +25,7 @@ class QuizAnswer extends Model
     {
         return [
             'is_correct' => 'boolean',
+            'selected_option_ids' => 'array',
             'points_awarded' => 'integer',
             'answered_at' => 'datetime',
         ];

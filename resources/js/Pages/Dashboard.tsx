@@ -96,6 +96,80 @@ export default function Dashboard() {
         return 'book'
     }
 
+    const activityPresentation = (activity: (typeof activities)[number]) => {
+        const type = activity.type.toLowerCase()
+        const resource = activity.assignment ?? activity.quiz ?? activity.lesson ?? activity.course ?? 'Learning activity'
+
+        if (type === 'course_enrollment') {
+            return { title: `Enrolled in ${activity.course ?? 'a course'}`, icon: 'book' as IconName }
+        }
+
+        if (type === 'first_assignment_submission') {
+            return { title: 'Submitted your first assignment', icon: 'assignment' as IconName }
+        }
+
+        if (type.includes('assignment') && (type.includes('submit') || type.includes('submission'))) {
+            return { title: `Submitted ${activity.assignment ?? 'an assignment'}`, icon: 'assignment' as IconName }
+        }
+
+        if (type.includes('assignment') && (type.includes('grade') || type.includes('graded') || type.includes('result'))) {
+            return { title: `Assignment graded: ${activity.assignment ?? 'Assignment'}`, icon: 'check' as IconName }
+        }
+
+        if (type.includes('assignment')) {
+            return { title: `Worked on ${activity.assignment ?? 'an assignment'}`, icon: 'assignment' as IconName }
+        }
+
+        if (type.includes('quiz') && (type.includes('complete') || type.includes('passed') || type.includes('submit'))) {
+            return { title: `Completed ${activity.quiz ?? 'a quiz'}`, icon: 'quiz' as IconName }
+        }
+
+        if (type.includes('quiz')) {
+            return { title: `Worked on ${activity.quiz ?? 'a quiz'}`, icon: 'quiz' as IconName }
+        }
+
+        if (type.includes('lesson') && (type.includes('complete') || type.includes('finish'))) {
+            return { title: `Completed ${activity.lesson ?? 'a lesson'}`, icon: 'check' as IconName }
+        }
+
+        if (type.includes('lesson')) {
+            return { title: `Studied ${activity.lesson ?? 'a lesson'}`, icon: 'book' as IconName }
+        }
+
+        if (type.includes('course') && type.includes('complete')) {
+            return { title: `Completed ${activity.course ?? 'a course'}`, icon: 'trophy' as IconName }
+        }
+
+        return { title: resource, icon: 'sparkles' as IconName }
+    }
+
+    const achievementPresentation = (achievement: (typeof earnedAchievements)[number]) => {
+        const icon = (achievement.icon ?? '').toLowerCase()
+        const name = achievement.name.toLowerCase()
+
+        if (icon === 'assignment' || name.includes('assignment')) {
+            return { icon: 'assignment' as IconName, tone: 'bg-blue-50 text-[#1554c0] dark:bg-blue-500/10 dark:text-[#6ba3ff]' }
+        }
+
+        if (icon === 'book-open' || icon === 'book' || name.includes('enrolled') || name.includes('course')) {
+            return { icon: 'book' as IconName, tone: 'bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300' }
+        }
+
+        if (icon === 'flame' || name.includes('streak')) {
+            return { icon: 'flame' as IconName, tone: 'bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-300' }
+        }
+
+        if (icon === 'shield' || name.includes('security')) {
+            return { icon: 'shield' as IconName, tone: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300' }
+        }
+
+        if (icon === 'target' || name.includes('goal') || name.includes('milestone')) {
+            return { icon: 'target' as IconName, tone: 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300' }
+        }
+
+        return { icon: 'sparkles' as IconName, tone: 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300' }
+    }
+
     return (
         <StudentLayout
             student={student}
@@ -764,31 +838,35 @@ export default function Dashboard() {
                                     <div className="grid grid-cols-2 gap-3">
                                         {earnedAchievements
                                             .slice(0, 4)
-                                            .map((achievement) => (
-                                                <div
-                                                    key={achievement.id}
-                                                    className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40"
-                                                >
-                                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400">
-                                                        <Icon
-                                                            name="trophy"
-                                                            className="h-4 w-4"
-                                                        />
+                                            .map((achievement) => {
+                                                const presentation = achievementPresentation(achievement)
+
+                                                return (
+                                                    <div
+                                                        key={achievement.id}
+                                                        className="rounded-xl border border-slate-100 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-950/40"
+                                                    >
+                                                        <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${presentation.tone}`}>
+                                                            <Icon
+                                                                name={presentation.icon}
+                                                                className="h-4 w-4"
+                                                            />
+                                                        </div>
+
+                                                        <p className="mt-3 line-clamp-1 text-xs font-semibold text-slate-800 dark:text-slate-100">
+                                                            {achievement.name}
+                                                        </p>
+
+                                                        <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
+                                                            {achievement.description}
+                                                        </p>
+
+                                                        <p className="mt-2 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                                            +{achievement.points} pts
+                                                        </p>
                                                     </div>
-
-                                                    <p className="mt-3 line-clamp-1 text-xs font-semibold text-slate-800 dark:text-slate-100">
-                                                        {achievement.name}
-                                                    </p>
-
-                                                    <p className="mt-1 line-clamp-2 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
-                                                        {achievement.description}
-                                                    </p>
-
-                                                    <p className="mt-2 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                                                        +{achievement.points} pts
-                                                    </p>
-                                                </div>
-                                            ))}
+                                                )
+                                            })}
                                     </div>
                                 ) : (
                                     <EmptyState
@@ -810,22 +888,7 @@ export default function Dashboard() {
                                 {activities.length ? (
                                     <div className="divide-y divide-slate-100 dark:divide-slate-800">
                                         {activities.slice(0, 8).map((activity) => {
-                                            const title =
-                                                activity.type === 'course_enrollment'
-                                                    ? `Enrolled in ${activity.course ?? 'course'}`
-                                                    : activity.lesson ??
-                                                      activity.assignment ??
-                                                      activity.quiz ??
-                                                      activity.course ??
-                                                      'Learning activity'
-
-                                            const icon: IconName =
-                                                activity.type === 'quiz'
-                                                    ? 'quiz'
-                                                    : activity.type ===
-                                                        'assignment'
-                                                      ? 'assignment'
-                                                      : 'book'
+                                            const presentation = activityPresentation(activity)
 
                                             return (
                                                 <div
@@ -834,14 +897,14 @@ export default function Dashboard() {
                                                 >
                                                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
                                                         <Icon
-                                                            name={icon}
+                                                            name={presentation.icon}
                                                             className="h-4 w-4"
                                                         />
                                                     </div>
 
                                                     <div className="min-w-0 flex-1">
                                                         <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">
-                                                            {title}
+                                                            {presentation.title}
                                                         </p>
 
                                                         <p className="mt-0.5 truncate text-[10px] text-slate-500 dark:text-slate-400">

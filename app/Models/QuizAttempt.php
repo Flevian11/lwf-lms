@@ -23,6 +23,11 @@ class QuizAttempt extends Model
         'started_at',
         'submitted_at',
         'graded_at',
+        'expires_at',
+        'violation_count',
+        'last_autosaved_at',
+        'auto_submitted_at',
+        'termination_reason',
     ];
 
     protected function casts(): array
@@ -36,6 +41,10 @@ class QuizAttempt extends Model
             'started_at' => 'datetime',
             'submitted_at' => 'datetime',
             'graded_at' => 'datetime',
+            'expires_at' => 'datetime',
+            'violation_count' => 'integer',
+            'last_autosaved_at' => 'datetime',
+            'auto_submitted_at' => 'datetime',
         ];
     }
 
@@ -52,5 +61,10 @@ class QuizAttempt extends Model
     public function answers(): HasMany
     {
         return $this->hasMany(QuizAnswer::class, 'attempt_id');
+    }
+
+    public function violations(): HasMany
+    {
+        return $this->hasMany(QuizAttemptViolation::class, 'attempt_id')->orderBy('sequence');
     }
 }

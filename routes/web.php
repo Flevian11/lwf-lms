@@ -1,13 +1,16 @@
 <?php
 
+use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\Auth\SocialAuthController;
+use App\Http\Controllers\CertificateController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailTwoFactorController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\QuizController;
 use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\StudentCoursesController;
 use App\Http\Controllers\UserSessionController;
@@ -59,19 +62,21 @@ Route::get('/reset-password', function () {
 })->name('password.reset.start');
 
 /*
- |--------------------------------------------------------------------------
- | Signed assignment submission downloads
- |--------------------------------------------------------------------------
- |
- | Email confirmation messages use a temporary signed URL so a student can
- | download the exact file they submitted without needing a second login.
- | The signature is the authorization boundary for this endpoint.
- |
- */
+|--------------------------------------------------------------------------
+| Signed assignment submission downloads
+|--------------------------------------------------------------------------
+|
+| Email confirmation messages use a temporary signed URL so a student can
+| download the exact file they submitted without needing a second login.
+| The signature is the authorization boundary for this endpoint.
+|
+*/
+
 Route::get('/assignments/{assignment}/submissions/{submission}/download/email', [
     AssignmentController::class,
     'downloadFromEmail',
-])->whereNumber(['assignment', 'submission'])
+])
+    ->whereNumber(['assignment', 'submission'])
     ->middleware('signed')
     ->name('assignments.submissions.email-download');
 
@@ -117,6 +122,35 @@ Route::middleware(['auth'])->group(function (): void {
 
     /*
     |--------------------------------------------------------------------------
+    | Achievements, Academic Transcript & Certificates
+    |--------------------------------------------------------------------------
+    |
+    | Student achievement records are read from the server.
+    |
+    | Certificates are only downloadable for the authenticated student's
+    | own completed course enrollment.
+    |
+    */
+
+    Route::get('/achievements', [
+        AchievementController::class,
+        'index',
+    ])->name('achievements.index');
+
+    Route::get('/achievements/transcript', [
+        AchievementController::class,
+        'transcript',
+    ])->name('achievements.transcript');
+
+    Route::get('/certificates/{enrollment}/download', [
+        CertificateController::class,
+        'download',
+    ])
+        ->whereNumber('enrollment')
+        ->name('certificates.download');
+
+    /*
+    |--------------------------------------------------------------------------
     | Assignments
     |--------------------------------------------------------------------------
     |
@@ -133,26 +167,103 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/assignments/{assignment}', [
         AssignmentController::class,
         'show',
-    ])->whereNumber('assignment')
+    ])
+        ->whereNumber('assignment')
         ->name('assignments.show');
 
     Route::post('/assignments/{assignment}/submit', [
         AssignmentController::class,
         'submit',
-    ])->whereNumber('assignment')
+    ])
+        ->whereNumber('assignment')
         ->name('assignments.submit');
 
     Route::get('/assignments/{assignment}/submissions/{submission}/download', [
         AssignmentController::class,
         'download',
-    ])->whereNumber(['assignment', 'submission'])
+    ])
+        ->whereNumber(['assignment', 'submission'])
         ->name('assignments.submissions.download');
 
     Route::get('/assignments/{assignment}/submissions/{submission}/transcript', [
         AssignmentController::class,
         'transcript',
-    ])->whereNumber(['assignment', 'submission'])
+    ])
+        ->whereNumber(['assignment', 'submission'])
         ->name('assignments.submissions.transcript');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Quizzes
+    |--------------------------------------------------------------------------
+    |
+    | Quiz attempts are server-authoritative. The browser is responsible for
+    | presenting the secure attempt interface and reporting observable
+    | security events; scoring, expiry and violation counting happen on the
+    | server.
+    |
+    */
+
+    Route::get('/quizzes', [
+        QuizController::class,
+        'index',
+    ])->name('quizzes.index');
+
+    Route::get('/quizzes/{quiz}', [
+        QuizController::class,
+        'show',
+    ])
+        ->whereNumber('quiz')
+        ->name('quizzes.show');
+
+    Route::post('/quizzes/{quiz}/start', [
+        QuizController::class,
+        'start',
+    ])
+        ->whereNumber('quiz')
+        ->name('quizzes.start');
+
+    Route::get('/quizzes/{quiz}/attempts/{attempt}', [
+        QuizController::class,
+        'attempt',
+    ])
+        ->whereNumber(['quiz', 'attempt'])
+        ->name('quizzes.attempt');
+
+    Route::post('/quizzes/{quiz}/attempts/{attempt}/answers', [
+        QuizController::class,
+        'saveAnswers',
+    ])
+        ->whereNumber(['quiz', 'attempt'])
+        ->name('quizzes.attempts.answers');
+
+    Route::post('/quizzes/{quiz}/attempts/{attempt}/heartbeat', [
+        QuizController::class,
+        'heartbeat',
+    ])
+        ->whereNumber(['quiz', 'attempt'])
+        ->name('quizzes.attempts.heartbeat');
+
+    Route::post('/quizzes/{quiz}/attempts/{attempt}/violation', [
+        QuizController::class,
+        'violation',
+    ])
+        ->whereNumber(['quiz', 'attempt'])
+        ->name('quizzes.attempts.violation');
+
+    Route::post('/quizzes/{quiz}/attempts/{attempt}/submit', [
+        QuizController::class,
+        'submit',
+    ])
+        ->whereNumber(['quiz', 'attempt'])
+        ->name('quizzes.attempts.submit');
+
+    Route::get('/quizzes/{quiz}/attempts/{attempt}/result', [
+        QuizController::class,
+        'result',
+    ])
+        ->whereNumber(['quiz', 'attempt'])
+        ->name('quizzes.result');
 
     /*
     |--------------------------------------------------------------------------

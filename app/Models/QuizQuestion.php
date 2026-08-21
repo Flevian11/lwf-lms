@@ -35,12 +35,12 @@ class QuizQuestion extends Model
 
     public function options(): HasMany
     {
-        return $this->hasMany(QuizOption::class)
+        return $this->hasMany(QuizOption::class, 'question_id')
             ->orderBy('position');
     }
 
     public function answers(): HasMany
     {
-        return $this->hasMany(QuizAnswer::class);
+        return $this->hasMany(QuizAnswer::class, 'question_id');
     }
 }
