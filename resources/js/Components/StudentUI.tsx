@@ -176,6 +176,39 @@ export function Icon({
                 <path d="M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" {...common} />
             </>
         ),
+        copy: (
+            <>
+                <rect x="9" y="9" width="11" height="11" rx="2" {...common} />
+                <path d="M15 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3" {...common} />
+            </>
+        ),
+        share: (
+            <>
+                <circle cx="18" cy="5" r="2.5" {...common} />
+                <circle cx="6" cy="12" r="2.5" {...common} />
+                <circle cx="18" cy="19" r="2.5" {...common} />
+                <path d="m8.2 10.8 7.6-4.3M8.2 13.2l7.6 4.3" {...common} />
+            </>
+        ),
+        trash: (
+            <>
+                <path d="M4 7h16M10 11v6M14 11v6" {...common} />
+                <path d="M9 7V4h6v3M6 7l1 14h10l1-14" {...common} />
+            </>
+        ),
+        refresh: (
+            <>
+                <path d="M20 11a8 8 0 0 0-14.7-3L4 10" {...common} />
+                <path d="M4 5v5h5M4 13a8 8 0 0 0 14.7 3L20 14" {...common} />
+                <path d="M20 19v-5h-5" {...common} />
+            </>
+        ),
+        edit: (
+            <>
+                <path d="m4 16.5-.7 3.7 3.7-.7L18.5 8a2.5 2.5 0 0 0-3.5-3.5L4 16.5Z" {...common} />
+                <path d="m13.5 6.5 4 4" {...common} />
+            </>
+        ),
     }
 
     return (

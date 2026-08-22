@@ -16,6 +16,21 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'openrouter' => [
+        'enabled' => filter_var(env('OPENROUTER_ENABLED', true), FILTER_VALIDATE_BOOL),
+        'key' => env('OPENROUTER_API_KEY'),
+        'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+        'models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env(
+                'OPENROUTER_MODELS',
+                'google/gemini-3.7-flash,nvidia/nemotron-3.5-lightning:free,openrouter/free'
+            ))
+        ))),
+        'referer' => env('OPENROUTER_SITE_URL', env('APP_URL')),
+        'title' => env('OPENROUTER_APP_NAME', 'Learn With Flevian LMS'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],

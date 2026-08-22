@@ -111,6 +111,7 @@ export type IconName =
     | 'shield' | 'user' | 'search' | 'sun' | 'moon' | 'menu' | 'x'
     | 'chevron' | 'calendar' | 'clock' | 'sparkles' | 'flame' | 'arrow'
     | 'logout' | 'support' | 'chatbot' | 'check' | 'target' | 'play' | 'more' | 'upload'
+    | 'copy' | 'share' | 'trash' | 'refresh' | 'edit'
 
 export interface SearchResult {
     type: 'Course' | 'Assignment' | 'Quiz'

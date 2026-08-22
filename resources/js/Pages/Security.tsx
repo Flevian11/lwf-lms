@@ -954,546 +954,454 @@ export default function Security() {
                 stats={stats}
                 title="Security"
             >
-                <div className="space-y-6">
-                    <section>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#1554c0] dark:text-[#6ba3ff]">
-                            Account
+                <div className="w-full px-4 py-4 sm:px-5 lg:px-6">
+                    {/* Header */}
+                    <div className="mb-4">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#1554c0] dark:text-[#6ba3ff]">
+                            Account protection
                         </p>
+                        <h1 className="mt-0.5 text-2xl font-bold tracking-[-0.03em] text-slate-950 dark:text-white">
+                            Security & sign-in protection
+                        </h1>
+                        <p className="mt-0.5 max-w-2xl text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+                            Manage how you sign in, review trusted authentication methods,
+                            and keep track of the devices currently using your account.
+                        </p>
+                    </div>
 
-                        <div className="mt-1 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-                            <div>
-                                <h1 className="text-3xl font-bold tracking-[-0.04em] text-slate-950 dark:text-white">
-                                    Security
-                                </h1>
-
-                                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                                    Manage sign-in
-                                    protection,
-                                    passkeys, and the
-                                    devices currently
-                                    using your account.
-                                </p>
-                            </div>
-
-                            <div className="flex items-center gap-2 text-xs text-slate-400">
-                                <Icon
-                                    name="shield"
-                                    className="h-4 w-4"
-                                />
-
-                                <span>
-                                    {user.email}
-                                </span>
-                            </div>
-                        </div>
-                    </section>
-
-                    <section className="grid gap-4 sm:grid-cols-3">
-                        <Card className="relative overflow-hidden p-5">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
-                                    <Icon
-                                        name="shield"
-                                        className="h-5 w-5"
-                                    />
-                                </div>
-
-                                <div>
-                                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
-                                        Two-factor
-                                    </p>
-
-                                    <p className="mt-1 text-sm font-bold text-slate-800 dark:text-white">
-                                        {twoFactorEnabled
-                                            ? 'Protected'
-                                            : 'Not enabled'}
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="relative overflow-hidden p-5">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
-                                    <FingerprintIcon />
-                                </div>
-
-                                <div>
-                                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
-                                        Passkeys
-                                    </p>
-
-                                    <p className="mt-1 text-sm font-bold text-slate-800 dark:text-white">
-                                        {
-                                            localPasskeys.length
-                                        }{' '}
-                                        registered
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="relative overflow-hidden p-5">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
-                                    <Icon
-                                        name="clock"
-                                        className="h-5 w-5"
-                                    />
-                                </div>
-
-                                <div>
-                                    <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-slate-400">
-                                        Active sessions
-                                    </p>
-
-                                    <p className="mt-1 text-sm font-bold text-slate-800 dark:text-white">
-                                        {sessionCount ??
-                                            sessionsLocal.length}
-                                    </p>
-                                </div>
-                            </div>
-                        </Card>
-                    </section>
-
-                    <Card className="p-5 sm:p-6">
-                        <SectionHeader
-                            title="Two-factor authentication"
-                            description="Add another verification step to protect your account."
-                            action={
-                                <StatusBadge
-                                    enabled={
-                                        twoFactorEnabled
-                                    }
-                                />
-                            }
-                        />
-
-                        {twoFactorError && (
-                            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
-                                {twoFactorError}
-                            </div>
-                        )}
-
-                        <div className="mt-5 rounded-2xl bg-slate-50/80 p-5 dark:bg-slate-900/60">
-                            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex items-start gap-3">
-                                    <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-[#1554c0] shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-[#6ba3ff] dark:ring-slate-700">
-                                        <LockIcon className="h-4 w-4" />
+                    {/* Summary */}
+                    <div className="grid gap-2.5 sm:grid-cols-3">
+                        {[
+                            [
+                                'shield',
+                                'Two-factor authentication',
+                                twoFactorEnabled ? 'Protected' : 'Not enabled',
+                                twoFactorEnabled ? 'Additional sign-in verification active' : 'Add another layer of protection',
+                            ],
+                            [
+                                'fingerprint',
+                                'Passkeys',
+                                localPasskeys.length,
+                                localPasskeys.length === 1 ? 'Registered authenticator' : 'Registered authenticators',
+                            ],
+                            [
+                                'clock',
+                                'Active sessions',
+                                sessionCount ?? sessionsLocal.length,
+                                otherSessions.length > 0 ? `${otherSessions.length} other device${otherSessions.length === 1 ? '' : 's'}` : 'Current device only',
+                            ],
+                        ].map(([icon, label, value, detail]) => (
+                            <Card key={String(label)} className="p-3.5">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]">
+                                        {icon === 'fingerprint' ? (
+                                            <FingerprintIcon className="h-4 w-4" />
+                                        ) : (
+                                            <Icon name={icon as any} className="h-4 w-4" />
+                                        )}
                                     </div>
-
-                                    <div>
-                                        <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">
-                                            {twoFactorEnabled
-                                                ? 'Your account has an additional verification layer.'
-                                                : 'Protect your account with two-factor authentication.'}
+                                    <div className="min-w-0">
+                                        <p className="text-[8px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                                            {label}
                                         </p>
-
-                                        <p className="mt-1.5 max-w-xl text-[11px] leading-5 text-slate-500 dark:text-slate-400">
-                                            {twoFactorEnabled
-                                                ? 'Two-factor authentication is active for your account.'
-                                                : 'Enable two-factor authentication before relying on it as a sign-in protection method.'}
+                                        <p className="mt-0.5 truncate text-lg font-bold text-slate-900 dark:text-white">
+                                            {value}
+                                        </p>
+                                        <p className="text-[8px] text-slate-400">
+                                            {detail}
                                         </p>
                                     </div>
                                 </div>
+                            </Card>
+                        ))}
+                    </div>
 
-                                {twoFactorEnabled ? (
-                                    <button
-                                        type="button"
-                                        disabled={
-                                            twoFactorProcessing
-                                        }
-                                        onClick={() =>
-                                            setConfirmation(
-                                                {
-                                                    type: 'disable-2fa',
-                                                },
-                                            )
-                                        }
-                                        className="h-9 shrink-0 rounded-xl border border-red-200 px-4 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:text-red-300 dark:hover:bg-red-950/20"
-                                    >
-                                        {twoFactorProcessing
-                                            ? 'Processing...'
-                                            : 'Disable 2FA'}
-                                    </button>
-                                ) : (
-                                    <form
-                                        onSubmit={
-                                            handleTwoFactorSubmit
-                                        }
-                                    >
-                                        <button
-                                            type="submit"
-                                            disabled={
-                                                twoFactorProcessing
-                                            }
-                                            className="h-9 rounded-xl bg-[#1554c0] px-4 text-xs font-semibold text-white transition hover:bg-[#1048a8] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#4c8dff] dark:text-[#07101f] dark:hover:bg-[#6ba3ff]"
-                                        >
-                                            {twoFactorProcessing
-                                                ? 'Enabling...'
-                                                : 'Enable 2FA'}
-                                        </button>
-                                    </form>
+                    {/* Main content */}
+                    <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_310px]">
+                        <div className="min-w-0 space-y-4">
+                            {/* Two-factor */}
+                            <section>
+                                <SectionHeader
+                                    title="Two-factor authentication"
+                                    description="Add another verification step to protect your account beyond your password."
+                                    action={<StatusBadge enabled={twoFactorEnabled} />}
+                                />
+
+                                {twoFactorError && (
+                                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] leading-5 text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+                                        {twoFactorError}
+                                    </div>
                                 )}
-                            </div>
-                        </div>
 
-                        {twoFactorConfigured &&
-                            !twoFactorEnabled && (
-                                <p className="mt-4 text-[10px] text-slate-400">
-                                    Two-factor configuration
-                                    exists but is not
-                                    currently enabled.
-                                </p>
-                            )}
-                    </Card>
-
-                    <Card className="p-5 sm:p-6">
-                        <SectionHeader
-                            title="Passkeys"
-                            description="Use a fingerprint, face recognition, PIN or another device authenticator."
-                            action={
-                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
-                                    <FingerprintIcon className="h-4 w-4" />
-                                </div>
-                            }
-                        />
-
-                        {(passkeyError || passkeyRegisterError) && (
-                            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs leading-5 text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
-                                {passkeyError ?? passkeyRegisterError}
-                            </div>
-                        )}
-
-                        <div className="mt-5 rounded-2xl border border-[#dbe5f3] bg-gradient-to-r from-[#f2f6ff] to-[#f7f4ff] p-5 dark:border-slate-800 dark:from-[#121e33] dark:to-[#18152f]">
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="min-w-0">
-                                    <p className="text-xs font-semibold text-slate-800 dark:text-slate-100">
-                                        Add a passkey
-                                    </p>
-
-                                    <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
-                                        This device is
-                                        identified
-                                        automatically. You
-                                        will not be asked to
-                                        enter a passkey name.
-                                    </p>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    disabled={
-                                        passkeyRegistering ||
-                                        !passkeysSupported
-                                    }
-                                    onClick={() =>
-                                        void startPasskeyRegistration()
-                                    }
-                                    className="h-9 shrink-0 rounded-xl bg-[#1554c0] px-4 text-xs font-semibold text-white transition hover:bg-[#1048a8] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#4c8dff] dark:text-[#07101f] dark:hover:bg-[#6ba3ff]"
-                                >
-                                    {passkeyRegistering
-                                        ? 'Registering...'
-                                        : 'Add passkey'}
-                                </button>
-                            </div>
-
-                            {!passkeysSupported && (
-                                <p className="mt-3 text-[10px] leading-5 text-amber-600 dark:text-amber-400">
-                                    Passkeys are not
-                                    supported by this
-                                    browser or device.
-                                </p>
-                            )}
-                        </div>
-
-                        {localPasskeys.length > 0 ? (
-                            <div className="mt-5 divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-100 dark:divide-slate-800 dark:border-slate-800">
-                                {localPasskeys.map(
-                                    passkey => (
-                                        <div
-                                            key={
-                                                passkey.id
-                                            }
-                                            className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between"
-                                        >
-                                            <div className="flex min-w-0 items-center gap-3">
-                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
-                                                    <FingerprintIcon className="h-4 w-4" />
-                                                </div>
-
-                                                <div className="min-w-0">
-                                                    <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">
-                                                        {
-                                                            passkey.name
-                                                        }
-                                                    </p>
-
-                                                    <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                                        {passkey.authenticator ??
-                                                            'Authenticator'}{' '}
-                                                        · Added{' '}
-                                                        {formatDate(
-                                                            passkey.created_at,
-                                                        )}{' '}
-                                                        · Last used{' '}
-                                                        {formatDate(
-                                                            passkey.last_used_at,
-                                                        )}
-                                                    </p>
-                                                </div>
+                                <Card className="mt-3 overflow-hidden p-0">
+                                    <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="flex min-w-0 items-start gap-3">
+                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]">
+                                                <LockIcon className="h-4 w-4" />
                                             </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                                    {twoFactorEnabled
+                                                        ? 'Your account has an additional verification layer.'
+                                                        : 'Protect your account with two-factor authentication.'}
+                                                </p>
+                                                <p className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
+                                                    {twoFactorEnabled
+                                                        ? 'Two-factor authentication is active for your account. You can disable it if you no longer want this extra verification step.'
+                                                        : 'Enable 2FA to require an additional verification step when protecting your account.'}
+                                                </p>
+                                            </div>
+                                        </div>
 
+                                        {twoFactorEnabled ? (
                                             <button
                                                 type="button"
-                                                disabled={
-                                                    passkeyDeleteProcessing !==
-                                                    null
-                                                }
-                                                onClick={() =>
-                                                    setConfirmation(
-                                                        {
-                                                            type: 'remove-passkey',
-                                                            passkeyId:
-                                                                passkey.id,
-                                                            passkeyName:
-                                                                passkey.name,
-                                                        },
-                                                    )
-                                                }
-                                                className="h-8 shrink-0 rounded-lg border border-red-200 px-3 text-[10px] font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:text-red-300 dark:hover:bg-red-950/20"
+                                                disabled={twoFactorProcessing}
+                                                onClick={() => setConfirmation({ type: 'disable-2fa' })}
+                                                className="inline-flex shrink-0 items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-[9px] font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:text-red-300 dark:hover:bg-red-950/20"
                                             >
-                                                {passkeyDeleteProcessing ===
-                                                passkey.id
-                                                    ? 'Removing...'
-                                                    : 'Remove'}
+                                                {twoFactorProcessing ? 'Processing...' : 'Disable 2FA'}
                                             </button>
+                                        ) : (
+                                            <form onSubmit={handleTwoFactorSubmit}>
+                                                <button
+                                                    type="submit"
+                                                    disabled={twoFactorProcessing}
+                                                    className="inline-flex shrink-0 items-center justify-center rounded-lg bg-[#1554c0] px-3.5 py-2 text-[9px] font-bold text-white shadow-sm transition hover:bg-[#1249a8] disabled:cursor-not-allowed disabled:opacity-70 dark:bg-[#4c8dff] dark:text-[#07101f]"
+                                                >
+                                                    {twoFactorProcessing ? 'Enabling...' : 'Enable 2FA'}
+                                                </button>
+                                            </form>
+                                        )}
+                                    </div>
+
+                                    {twoFactorConfigured && !twoFactorEnabled && (
+                                        <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-2.5 dark:border-slate-800 dark:bg-slate-900/60">
+                                            <p className="text-[9px] leading-4 text-slate-400 dark:text-slate-500">
+                                                A two-factor configuration exists, but it is not currently enabled.
+                                            </p>
                                         </div>
-                                    ),
+                                    )}
+                                </Card>
+                            </section>
+
+                            {/* Passkeys */}
+                            <section>
+                                <SectionHeader
+                                    title="Passkeys"
+                                    description="Use a fingerprint, face recognition, PIN or another device authenticator for passwordless sign-in."
+                                    action={
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]">
+                                            <FingerprintIcon className="h-4 w-4" />
+                                        </div>
+                                    }
+                                />
+
+                                {(passkeyError || passkeyRegisterError) && (
+                                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] leading-5 text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+                                        {passkeyError ?? passkeyRegisterError}
+                                    </div>
                                 )}
-                            </div>
-                        ) : (
-                            <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-8 text-center dark:border-slate-800 dark:bg-slate-900/40">
-                                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-500 dark:ring-slate-700">
-                                    <FingerprintIcon />
-                                </div>
 
-                                <p className="mt-3 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                    No passkeys registered
-                                </p>
+                                <Card className="mt-3 overflow-hidden p-0">
+                                    <div className="flex flex-col gap-3 border-b border-slate-100 bg-gradient-to-r from-[#edf4ff] to-[#f7f4ff] p-4 dark:border-slate-800 dark:from-[#121e33] dark:to-[#18152f] sm:flex-row sm:items-center sm:justify-between">
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                                Add a passkey to this device
+                                            </p>
+                                            <p className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
+                                                The device is identified automatically. You will not be asked to enter a passkey name.
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            disabled={passkeyRegistering || !passkeysSupported}
+                                            onClick={() => void startPasskeyRegistration()}
+                                            className="inline-flex shrink-0 items-center justify-center rounded-lg bg-[#1554c0] px-3.5 py-2 text-[9px] font-bold text-white shadow-sm transition hover:bg-[#1249a8] disabled:cursor-not-allowed disabled:opacity-70 dark:bg-[#4c8dff] dark:text-[#07101f]"
+                                        >
+                                            {passkeyRegistering ? 'Registering...' : 'Add passkey'}
+                                        </button>
+                                    </div>
 
-                                <p className="mx-auto mt-1 max-w-sm text-[10px] leading-5 text-slate-400">
-                                    Add a passkey to make
-                                    signing in faster and
-                                    more secure.
-                                </p>
-                            </div>
-                        )}
-                    </Card>
+                                    {!passkeysSupported && (
+                                        <div className="border-b border-slate-100 bg-amber-50/60 px-4 py-2.5 dark:border-slate-800 dark:bg-amber-500/5">
+                                            <p className="text-[9px] leading-4 text-amber-700 dark:text-amber-300">
+                                                Passkeys are not supported by this browser or device.
+                                            </p>
+                                        </div>
+                                    )}
 
-                    <Card className="p-5 sm:p-6">
-                        <SectionHeader
-                            title="Active sessions"
-                            description="Review the devices and sessions associated with your account."
-                            action={
-                                otherSessions.length >
-                                0 ? (
-                                    <button
-                                        type="button"
-                                        onClick={() =>
-                                            setConfirmation(
-                                                {
-                                                    type: 'revoke-other-sessions',
-                                                },
-                                            )
-                                        }
-                                        className="hidden h-9 rounded-xl border border-slate-200 px-3 text-[10px] font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:inline-flex sm:items-center dark:border-slate-700 dark:text-slate-300"
-                                    >
-                                        Sign out others
-                                    </button>
-                                ) : null
-                            }
-                        />
-
-                        {sessionError && (
-                            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
-                                {sessionError}
-                            </div>
-                        )}
-
-                        {sessionSuccess && (
-                            <div className="mt-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300">
-                                {sessionSuccess}
-                            </div>
-                        )}
-
-                        {sessionsLocal.length > 0 ? (
-                            <div className="mt-5 space-y-3">
-                                {sessionsLocal.map(
-                                    session => {
-                                        const current =
-                                            Boolean(
-                                                session.is_current,
-                                            )
-
-                                        const activity =
-                                            sessionActivity(
-                                                session,
-                                            )
-
-                                        return (
-                                            <div
-                                                key={
-                                                    session.id
-                                                }
-                                                className={[
-                                                    'rounded-2xl border p-4',
-                                                    current
-                                                        ? 'border-[#bfd0ee] bg-[#f5f8ff] dark:border-[#29466f] dark:bg-[#101c30]'
-                                                        : 'border-slate-100 dark:border-slate-800',
-                                                ].join(
-                                                    ' ',
-                                                )}
-                                            >
-                                                <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                                                    <div className="flex min-w-0 flex-1 items-start gap-3">
-                                                        <div
-                                                            className={[
-                                                                'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                                                                current
-                                                                    ? 'bg-[#1554c0]/10 text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]'
-                                                                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
-                                                            ].join(
-                                                                ' ',
-                                                            )}
-                                                        >
-                                                            <DeviceIcon
-                                                                session={
-                                                                    session
-                                                                }
-                                                            />
+                                    {localPasskeys.length > 0 ? (
+                                        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {localPasskeys.map(passkey => (
+                                                <div key={passkey.id} className="flex flex-col gap-3 p-3.5 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div className="flex min-w-0 items-center gap-3">
+                                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]">
+                                                            <FingerprintIcon className="h-4 w-4" />
                                                         </div>
-
                                                         <div className="min-w-0">
-                                                            <div className="flex flex-wrap items-center gap-2">
-                                                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                                                                    {deviceLabel(
-                                                                        session,
-                                                                    )}
-                                                                </p>
-
-                                                                {current && (
-                                                                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.08em] text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
-                                                                        Current
-                                                                    </span>
-                                                                )}
-                                                            </div>
-
-                                                            <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
-                                                                {browserLabel(
-                                                                    session,
-                                                                )}{' '}
-                                                                ·{' '}
-                                                                {platformLabel(
-                                                                    session,
-                                                                )}
+                                                            <p className="truncate text-xs font-bold text-slate-900 dark:text-white">
+                                                                {passkey.name}
                                                             </p>
-
-                                                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-400">
-                                                                <span>
-                                                                    IP:{' '}
-                                                                    {session.ip_address ??
-                                                                        'Unavailable'}
-                                                                </span>
-
-                                                                <span>
-                                                                    {activity
-                                                                        ? relativeTime(
-                                                                              activity,
-                                                                          )
-                                                                        : 'Activity unavailable'}
-                                                                </span>
-                                                            </div>
+                                                            <p className="mt-0.5 text-[9px] leading-4 text-slate-500 dark:text-slate-400">
+                                                                {passkey.authenticator ?? 'Authenticator'} · Added {formatDate(passkey.created_at)} · Last used {formatDate(passkey.last_used_at)}
+                                                            </p>
                                                         </div>
                                                     </div>
-
-                                                    {!current && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                setConfirmation(
-                                                                    {
-                                                                        type: 'revoke-session',
-                                                                        sessionId:
-                                                                            session.id,
-                                                                        sessionName:
-                                                                            deviceLabel(
-                                                                                session,
-                                                                            ),
-                                                                    },
-                                                                )
-                                                            }
-                                                            className="h-8 shrink-0 rounded-lg border border-red-200 px-3 text-[10px] font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-900/50 dark:text-red-300"
-                                                        >
-                                                            Revoke
-                                                        </button>
-                                                    )}
+                                                    <button
+                                                        type="button"
+                                                        disabled={passkeyDeleteProcessing !== null}
+                                                        onClick={() => setConfirmation({ type: 'remove-passkey', passkeyId: passkey.id, passkeyName: passkey.name })}
+                                                        className="inline-flex shrink-0 items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-[9px] font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/50 dark:text-red-300 dark:hover:bg-red-950/20"
+                                                    >
+                                                        {passkeyDeleteProcessing === passkey.id ? 'Removing...' : 'Remove'}
+                                                    </button>
                                                 </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="px-5 py-8 text-center">
+                                            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+                                                <FingerprintIcon className="h-5 w-5" />
                                             </div>
-                                        )
-                                    },
+                                            <p className="mt-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+                                                No passkeys registered
+                                            </p>
+                                            <p className="mx-auto mt-1 max-w-sm text-[9px] leading-4 text-slate-400">
+                                                Add a passkey to make signing in faster and more secure on a trusted device.
+                                            </p>
+                                        </div>
+                                    )}
+                                </Card>
+                            </section>
+
+                            {/* Sessions */}
+                            <section>
+                                <SectionHeader
+                                    title="Active sessions"
+                                    description="Review the devices and sessions associated with your account."
+                                    action={
+                                        otherSessions.length > 0 ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setConfirmation({ type: 'revoke-other-sessions' })}
+                                                className="hidden rounded-lg border border-slate-200 px-3 py-2 text-[9px] font-bold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:inline-flex dark:border-slate-700 dark:text-slate-300"
+                                            >
+                                                Sign out others
+                                            </button>
+                                        ) : null
+                                    }
+                                />
+
+                                {sessionError && (
+                                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[10px] text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+                                        {sessionError}
+                                    </div>
                                 )}
-                            </div>
-                        ) : (
-                            <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-9 text-center dark:border-slate-800 dark:bg-slate-900/40">
-                                <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-white text-slate-400 shadow-sm ring-1 ring-slate-200 dark:bg-slate-800 dark:ring-slate-700">
-                                    <Icon
-                                        name="clock"
-                                        className="h-5 w-5"
-                                    />
+                                {sessionSuccess && (
+                                    <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-[10px] text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300">
+                                        {sessionSuccess}
+                                    </div>
+                                )}
+
+                                {sessionsLocal.length > 0 ? (
+                                    <div className="mt-3 space-y-2.5">
+                                        {sessionsLocal.map(session => {
+                                            const current = Boolean(session.is_current)
+                                            const activity = sessionActivity(session)
+
+                                            return (
+                                                <Card
+                                                    key={session.id}
+                                                    className={[
+                                                        'p-3.5',
+                                                        current
+                                                            ? 'border-[#bfd0ee] bg-[#f8faff] dark:border-[#29466f] dark:bg-[#101c30]'
+                                                            : '',
+                                                    ].join(' ')}
+                                                >
+                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                                        <div className="flex min-w-0 flex-1 items-start gap-3">
+                                                            <div className={[
+                                                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl',
+                                                                current
+                                                                    ? 'bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]'
+                                                                    : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400',
+                                                            ].join(' ')}>
+                                                                <DeviceIcon session={session} />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                                                        {deviceLabel(session)}
+                                                                    </p>
+                                                                    {current && (
+                                                                        <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-emerald-700 dark:text-emerald-300">
+                                                                            Current
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <p className="mt-0.5 text-[9px] text-slate-500 dark:text-slate-400">
+                                                                    {browserLabel(session)} · {platformLabel(session)}
+                                                                </p>
+                                                                <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[9px] text-slate-400">
+                                                                    <span>IP: {session.ip_address ?? 'Unavailable'}</span>
+                                                                    <span>{activity ? relativeTime(activity) : 'Activity unavailable'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {!current && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setConfirmation({
+                                                                    type: 'revoke-session',
+                                                                    sessionId: session.id,
+                                                                    sessionName: deviceLabel(session),
+                                                                })}
+                                                                className="inline-flex shrink-0 items-center justify-center rounded-lg border border-red-200 px-3 py-2 text-[9px] font-bold text-red-600 transition hover:bg-red-50 dark:border-red-900/50 dark:text-red-300 dark:hover:bg-red-950/20"
+                                                            >
+                                                                Revoke
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </Card>
+                                            )
+                                        })}
+                                    </div>
+                                ) : (
+                                    <Card className="mt-3 p-7 text-center">
+                                        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-slate-50 text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+                                            <Icon name="clock" className="h-5 w-5" />
+                                        </div>
+                                        <p className="mt-2 text-xs font-bold text-slate-700 dark:text-slate-200">
+                                            No session details available
+                                        </p>
+                                        <p className="mx-auto mt-1 max-w-md text-[9px] leading-4 text-slate-400">
+                                            The security controller has not supplied session records.
+                                        </p>
+                                    </Card>
+                                )}
+
+                                {otherSessions.length > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setConfirmation({ type: 'revoke-other-sessions' })}
+                                        className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2.5 text-[9px] font-bold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:hidden dark:border-slate-700 dark:text-slate-300"
+                                    >
+                                        Sign out other devices
+                                    </button>
+                                )}
+
+                                <div className="mt-3 rounded-xl bg-slate-50 px-3.5 py-2.5 dark:bg-slate-900/70">
+                                    <p className="text-[9px] leading-4 text-slate-400 dark:text-slate-500">
+                                        Session information can include the device, browser, operating system, IP address and recent activity. Location information is intentionally not displayed here.
+                                    </p>
                                 </div>
+                            </section>
+                        </div>
 
-                                <p className="mt-3 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                    No session details
-                                    available
+                        {/* Right */}
+                        <aside className="min-w-0 space-y-3">
+                            <Card className="p-4">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                    Security overview
+                                </p>
+                                <h2 className="mt-0.5 text-base font-bold tracking-[-0.02em] text-slate-900 dark:text-white">
+                                    Keep your account protected
+                                </h2>
+                                <p className="mt-0.5 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
+                                    Strong authentication methods and regular session reviews reduce the chance of unauthorized account access.
                                 </p>
 
-                                <p className="mx-auto mt-1 max-w-md text-[10px] leading-5 text-slate-400">
-                                    The security controller
-                                    has not supplied
-                                    session records.
+                                <div className="mt-3 rounded-xl bg-gradient-to-r from-[#edf4ff] to-[#f7f4ff] p-3 dark:from-[#121e33] dark:to-[#18152f]">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/80 text-[#1554c0] dark:bg-slate-900/60 dark:text-[#8bb8ff]">
+                                            <Icon name="shield" className="h-4 w-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-900 dark:text-white">
+                                                {twoFactorEnabled ? 'Extra verification active' : 'Extra verification not active'}
+                                            </p>
+                                            <p className="text-[9px] text-slate-400">
+                                                {twoFactorEnabled ? 'Your account has an additional sign-in layer.' : 'Enable 2FA from the section on the left.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card className="p-4">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                    Authentication methods
+                                </p>
+                                <div className="mt-3 space-y-1.5">
+                                    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/70">
+                                        <span className="text-[9px] text-slate-500 dark:text-slate-400">Two-factor</span>
+                                        <span className={twoFactorEnabled ? 'text-[9px] font-bold text-emerald-600 dark:text-emerald-400' : 'text-[9px] font-bold text-slate-400'}>
+                                            {twoFactorEnabled ? 'Enabled' : 'Disabled'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/70">
+                                        <span className="text-[9px] text-slate-500 dark:text-slate-400">Passkeys</span>
+                                        <span className="text-[9px] font-bold text-slate-900 dark:text-white">
+                                            {localPasskeys.length} registered
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/70">
+                                        <span className="text-[9px] text-slate-500 dark:text-slate-400">Other sessions</span>
+                                        <span className="text-[9px] font-bold text-slate-900 dark:text-white">
+                                            {otherSessions.length}
+                                        </span>
+                                    </div>
+                                </div>
+                            </Card>
+
+                            <Card className="p-4">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                    Security checklist
+                                </p>
+                                <div className="mt-3 space-y-2.5">
+                                    {[
+                                        [twoFactorEnabled, 'Enable two-factor authentication', 'Adds another verification step to account sign-in.'],
+                                        [localPasskeys.length > 0, 'Register a passkey', 'Use your device authenticator for faster sign-in.'],
+                                        [otherSessions.length === 0, 'Review other sessions', 'Sign out devices you no longer recognize or use.'],
+                                    ].map(([complete, title, description]) => (
+                                        <div key={String(title)} className="flex gap-2.5">
+                                            <div className={[
+                                                'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg',
+                                                complete
+                                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                                    : 'bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]',
+                                            ].join(' ')}>
+                                                <Icon name={complete ? 'check' : 'shield'} className="h-3.5 w-3.5" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] font-bold text-slate-700 dark:text-slate-200">
+                                                    {title}
+                                                </p>
+                                                <p className="mt-0.5 text-[9px] leading-4 text-slate-400">
+                                                    {description}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </Card>
+
+                            <div className="rounded-2xl border border-[#dfe7f3] bg-gradient-to-br from-[#f8fbff] via-white to-[#f6f4ff] p-4 dark:border-[#273753] dark:from-[#101827] dark:via-[#111b2d] dark:to-[#17152d]">
+                                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#1554c0] dark:text-[#8bb8ff]">
+                                    Need help?
+                                </p>
+                                <p className="mt-1 text-xs font-bold text-slate-900 dark:text-white">
+                                    Ask TechGhost AI
+                                </p>
+                                <p className="mt-1 text-[9px] leading-4 text-slate-500 dark:text-slate-400">
+                                    Get guidance about your learning account and portal features from the AI assistant.
                                 </p>
                             </div>
-                        )}
-
-                        {otherSessions.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setConfirmation(
-                                        {
-                                            type: 'revoke-other-sessions',
-                                        },
-                                    )
-                                }
-                                className="mt-4 h-9 w-full rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 sm:hidden dark:border-slate-700 dark:text-slate-300"
-                            >
-                                Sign out other devices
-                            </button>
-                        )}
-
-                        <div className="mt-5 rounded-xl bg-slate-50 px-4 py-3 dark:bg-slate-900/60">
-                            <p className="text-[10px] leading-5 text-slate-400 dark:text-slate-500">
-                                Session information can
-                                include the device,
-                                browser, operating system,
-                                IP address and recent
-                                activity. Location
-                                information is intentionally
-                                not displayed here.
-                            </p>
-                        </div>
-                    </Card>
+                        </aside>
+                    </div>
                 </div>
             </StudentLayout>
 
@@ -1501,10 +1409,7 @@ export default function Security() {
                 <div
                     className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-[2px]"
                     onMouseDown={event => {
-                        if (
-                            event.target ===
-                            event.currentTarget
-                        ) {
+                        if (event.target === event.currentTarget) {
                             setConfirmation(null)
                         }
                     }}
@@ -1512,40 +1417,29 @@ export default function Security() {
                     <div
                         role="dialog"
                         aria-modal="true"
-                        className="w-full max-w-md overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_25px_80px_rgba(15,23,42,0.22)] dark:border-slate-700 dark:bg-[#111827]"
+                        className="w-full max-w-md overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_25px_80px_rgba(15,23,42,0.22)] dark:border-slate-700 dark:bg-[#111827]"
                     >
-                        <div className="p-6">
-                            <div className="flex items-start gap-4">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300">
-                                    <Icon
-                                        name="shield"
-                                        className="h-5 w-5"
-                                    />
+                        <div className="p-5">
+                            <div className="flex items-start gap-3.5">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-300">
+                                    <Icon name="shield" className="h-4 w-4" />
                                 </div>
-
                                 <div>
-                                    <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                                        {confirmation.type ===
-                                        'disable-2fa'
+                                    <h2 className="text-xs font-bold text-slate-900 dark:text-white">
+                                        {confirmation.type === 'disable-2fa'
                                             ? 'Disable two-factor authentication?'
-                                            : confirmation.type ===
-                                                'remove-passkey'
+                                            : confirmation.type === 'remove-passkey'
                                               ? 'Remove passkey?'
-                                              : confirmation.type ===
-                                                  'revoke-other-sessions'
+                                              : confirmation.type === 'revoke-other-sessions'
                                                 ? 'Sign out other devices?'
                                                 : 'Revoke this session?'}
                                     </h2>
-
-                                    <p className="mt-2 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                        {confirmation.type ===
-                                        'disable-2fa'
+                                    <p className="mt-1.5 text-[10px] leading-5 text-slate-500 dark:text-slate-400">
+                                        {confirmation.type === 'disable-2fa'
                                             ? 'Two-factor authentication will no longer protect this account.'
-                                            : confirmation.type ===
-                                                'remove-passkey'
+                                            : confirmation.type === 'remove-passkey'
                                               ? `"${confirmation.passkeyName}" will no longer be available for signing in.`
-                                              : confirmation.type ===
-                                                  'revoke-other-sessions'
+                                              : confirmation.type === 'revoke-other-sessions'
                                                 ? 'All other sessions will be invalidated while this current session remains active.'
                                                 : `"${confirmation.sessionName}" will be signed out and will need to authenticate again.`}
                                     </p>
@@ -1553,50 +1447,28 @@ export default function Security() {
                             </div>
                         </div>
 
-                        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-6 py-4 sm:flex-row sm:justify-end dark:border-slate-800">
+                        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 px-5 py-3.5 sm:flex-row sm:justify-end dark:border-slate-800">
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setConfirmation(null)
-                                }
-                                className="h-9 rounded-xl border border-slate-200 px-4 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
+                                onClick={() => setConfirmation(null)}
+                                className="h-9 rounded-lg border border-slate-200 px-4 text-[9px] font-bold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300"
                             >
                                 Cancel
                             </button>
-
                             <button
                                 type="button"
                                 onClick={() => {
-                                    if (
-                                        confirmation.type ===
-                                        'disable-2fa'
-                                    ) {
+                                    if (confirmation.type === 'disable-2fa') {
                                         void disableTwoFactor()
-                                    } else if (
-                                        confirmation.type ===
-                                            'remove-passkey' &&
-                                        confirmation.passkeyId !==
-                                            undefined
-                                    ) {
-                                        void removePasskey(
-                                            confirmation.passkeyId,
-                                        )
-                                    } else if (
-                                        confirmation.type ===
-                                            'revoke-session' &&
-                                        confirmation.sessionId
-                                    ) {
-                                        revokeSession(
-                                            confirmation.sessionId,
-                                        )
-                                    } else if (
-                                        confirmation.type ===
-                                        'revoke-other-sessions'
-                                    ) {
+                                    } else if (confirmation.type === 'remove-passkey' && confirmation.passkeyId !== undefined) {
+                                        void removePasskey(confirmation.passkeyId)
+                                    } else if (confirmation.type === 'revoke-session' && confirmation.sessionId) {
+                                        revokeSession(confirmation.sessionId)
+                                    } else if (confirmation.type === 'revoke-other-sessions') {
                                         revokeOtherSessions()
                                     }
                                 }}
-                                className="h-9 rounded-xl bg-red-600 px-4 text-xs font-semibold text-white transition hover:bg-red-700"
+                                className="h-9 rounded-lg bg-red-600 px-4 text-[9px] font-bold text-white transition hover:bg-red-700"
                             >
                                 Confirm
                             </button>
@@ -1606,4 +1478,5 @@ export default function Security() {
             )}
         </>
     )
+
 }

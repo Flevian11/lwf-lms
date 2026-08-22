@@ -4,6 +4,8 @@ use App\Http\Controllers\AchievementController;
 use App\Http\Controllers\AssignmentController;
 use App\Http\Controllers\Auth\SocialAuthController;
 use App\Http\Controllers\CertificateController;
+use App\Http\Controllers\StudentChatbotController;
+use App\Http\Controllers\StudentSearchController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\DashboardController;
@@ -119,6 +121,59 @@ Route::middleware(['auth'])->group(function (): void {
 
     Route::get('/dashboard', DashboardController::class)
         ->name('dashboard');
+
+    /*
+    |--------------------------------------------------------------------------
+    | TechGhost AI Learning Assistant
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/chatbot', [
+        StudentChatbotController::class,
+        'page',
+    ])->name('chatbot');
+
+    Route::get('/student/search', StudentSearchController::class)
+        ->middleware('throttle:60,1')
+        ->name('student.search');
+
+    Route::post('/chatbot/message', [
+        StudentChatbotController::class,
+        'message',
+    ])
+        ->middleware('throttle:30,1')
+        ->name('chatbot.message');
+
+    Route::get('/chatbot/conversations', [
+        StudentChatbotController::class,
+        'conversations',
+    ])->name('chatbot.conversations');
+
+    Route::post('/chatbot/conversations', [
+        StudentChatbotController::class,
+        'storeConversation',
+    ])->name('chatbot.conversations.store');
+
+    Route::get('/chatbot/conversations/{conversation}', [
+        StudentChatbotController::class,
+        'showConversation',
+    ])->name('chatbot.conversations.show');
+
+    Route::patch('/chatbot/conversations/{conversation}', [
+        StudentChatbotController::class,
+        'renameConversation',
+    ])->name('chatbot.conversations.rename');
+
+    Route::delete('/chatbot/conversations/{conversation}', [
+        StudentChatbotController::class,
+        'destroyConversation',
+    ])->name('chatbot.conversations.destroy');
+
+    Route::delete('/chatbot/conversations/{conversation}/messages/{message}', [
+        StudentChatbotController::class,
+        'destroyMessage',
+    ])->whereNumber(['conversation', 'message'])->name('chatbot.messages.destroy');
+
 
     /*
     |--------------------------------------------------------------------------
