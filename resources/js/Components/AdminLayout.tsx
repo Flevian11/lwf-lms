@@ -25,7 +25,7 @@ const sections = [
     {
         label: 'Learning',
         items: [
-            { label: 'Courses', icon: 'book' as const, enabled: false },
+            { label: 'Courses', href: '/admin/courses', icon: 'book' as const, enabled: true },
             { label: 'Modules & Lessons', icon: 'book' as const, enabled: false },
             { label: 'Assignments', icon: 'assignment' as const, enabled: false },
             { label: 'Quizzes', icon: 'quiz' as const, enabled: false },
@@ -168,7 +168,7 @@ export default function AdminLayout({ admin, title = 'Admin Portal', children }:
                                 </p>
                                 <div className="mt-3 space-y-1">
                                     {section.items.map((item) => {
-                                        const active = item.enabled && (pathname === item.href || pathname.startsWith(`${item.href}/`))
+                                        const active = item.enabled && (item.href === '/admin' ? pathname === '/admin' : pathname === item.href || pathname.startsWith(`${item.href}/`))
 
                                         if (item.enabled) {
                                             return (
@@ -176,7 +176,7 @@ export default function AdminLayout({ admin, title = 'Admin Portal', children }:
                                                     key={item.label}
                                                     href={item.href}
                                                     onClick={() => setSidebarOpen(false)}
-                                                    className={`group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition ${
+                                                    className={`group relative flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium transition ${
                                                         active
                                                             ? 'bg-[#edf4ff] text-[#1554c0] ring-1 ring-inset ring-[#1554c0]/[0.07] before:absolute before:left-0 before:top-1/2 before:h-5 before:w-0.5 before:-translate-y-1/2 before:rounded-full before:bg-[#1554c0] dark:bg-[#172945]/70 dark:text-[#6ba3ff] dark:before:bg-[#6ba3ff]'
                                                             : 'text-[#53627a] hover:bg-[#f7f9fd] hover:text-[#172033] dark:text-[#aab7cc] dark:hover:bg-slate-900/70 dark:hover:text-white'
@@ -208,6 +208,15 @@ export default function AdminLayout({ admin, title = 'Admin Portal', children }:
                     </nav>
 
                     <div className="shrink-0 border-t border-slate-100 p-3 dark:border-slate-800">
+                        <form onSubmit={handleLogout} className="mb-2">
+                            <button
+                                type="submit"
+                                className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                            >
+                                <Icon name="logout" className="h-[17px] w-[17px]" />
+                                Sign out
+                            </button>
+                        </form>
                         <div className="rounded-2xl border border-[#dfe7f3] bg-gradient-to-br from-[#f8fbff] via-white to-[#f6f4ff] p-4 shadow-[0_6px_20px_rgba(21,84,192,0.025)] dark:border-[#273753] dark:from-[#101827] dark:via-[#111b2d] dark:to-[#17152d] dark:shadow-[0_10px_28px_rgba(0,0,0,0.18)]">
                             <div className="flex items-center gap-3">
                                 {avatar ? (

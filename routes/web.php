@@ -10,6 +10,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminCourseController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminSecurityController;
@@ -121,6 +122,20 @@ Route::middleware(['auth', AdminMiddleware::class])
     ->group(function (): void {
         Route::get('/', AdminDashboardController::class)
             ->name('dashboard');
+
+        Route::get('/courses', [AdminCourseController::class, 'index'])
+            ->name('courses.index');
+
+        Route::post('/courses', [AdminCourseController::class, 'store'])
+            ->name('courses.store');
+
+        Route::put('/courses/{course}', [AdminCourseController::class, 'update'])
+            ->whereNumber('course')
+            ->name('courses.update');
+
+        Route::delete('/courses/{course}', [AdminCourseController::class, 'destroy'])
+            ->whereNumber('course')
+            ->name('courses.destroy');
 
         Route::get('/profile', [
             AdminProfileController::class,
