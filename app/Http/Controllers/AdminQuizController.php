@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Course;
+use App\Models\Quiz;
+use App\Models\QuizAllocation;
+use App\Models\QuizAttempt;
+use App\Models\QuizOption;
+use App\Models\QuizQuestion;
+use App\Models\User;
+use App\Notifications\QuizAllocatedNotification;
+use App\Services\AuditLogService;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+use Throwable;
+
+class AdminQuizController extends Controller
+{
+    public function index(Request $request): Response
+    {
+        $search=trim((string)$request->query('search','')); $status=(string)$request->query('status','all'); $courseId=$request->integer('course_id')?:null; $selected=$request->integer('quiz_id')?:null;
+        $q=Quiz::query()->with('course:id,title')->withCount(['questions','attempts','allocations'])->latest('updated_at');
+        if($search!=='') $q->where(fn($x)=>$x->where('title','like',"%{$search}%")->orWhere('slug','like',"%{$search}%"));
+        if(in_array($status,['draft','published','closed'],true)) $q->where('status',$status); if($courseId) $q->where('course_id',$courseId);
+        $quizzes=$q->paginate(10)->withQueryString()->through(fn(Quiz $quiz)=>$this->payload($quiz));
+        $selectedQuiz=$selected ? Quiz::with(['course:id,title','questions.options','allocations.user:id,name,email,avatar_path'])->find($selected) : null;
+        $allocationCourseId = $selectedQuiz?->course_id ?: $courseId;
+        $attempts=$selectedQuiz ? QuizAttempt::with('user:id,name,email,avatar_path')->where('quiz_id',$selectedQuiz->id)->latest('submitted_at')->paginate(10,['*'],'attempt_page')->withQueryString()->through(fn(QuizAttempt $a)=>['id'=>$a->id,'user'=>['id'=>$a->user->id,'name'=>$a->user->name,'email'=>$a->user->email,'avatar_path'=>$a->user->avatar_path],'attempt_number'=>$a->attempt_number,'status'=>$a->status,'score'=>$a->score,'max_score'=>$a->max_score,'percentage'=>$a->percentage,'passed'=>$a->passed,'violation_count'=>$a->violation_count,'started_at'=>$a->started_at?->toISOString(),'submitted_at'=>$a->submitted_at?->toISOString(),'graded_at'=>$a->graded_at?->toISOString()]) : null;
+        return Inertia::render('Admin/Quizzes',['admin'=>$this->adminPayload($request),'quizzes'=>$quizzes,'courses'=>Course::orderBy('title')->get(['id','title','slug']),'students'=>$allocationCourseId ? $this->eligibleStudents($allocationCourseId)->map(fn(User $u)=>$this->studentPayload($u))->values()->all() : [],'selectedQuiz'=>$selectedQuiz ? $this->detail($selectedQuiz) : null,'attempts'=>$attempts,'filters'=>['search'=>$search,'status'=>$status,'course_id'=>$courseId,'quiz_id'=>$selected]]);
+    }
+    public function store(Request $request): RedirectResponse { $data=$this->validateQuiz($request); $data['created_by']=$request->user()->id; $data['slug']=$this->uniqueSlug($data['slug']?:$data['title'], null, $data['course_id']); $quiz=Quiz::create($data); $this->audit('quiz_created',$request,$quiz); return back()->with('success','Quiz created successfully.'); }
+    public function update(Request $request,Quiz $quiz):RedirectResponse { $data=$this->validateQuiz($request,$quiz); $data['slug']=$this->uniqueSlug($data['slug']?:$data['title'],$quiz->id,$data['course_id']); $quiz->update($data); $this->audit('quiz_updated',$request,$quiz); return back()->with('success','Quiz updated successfully.'); }
+    public function destroy(Request $request,Quiz $quiz):RedirectResponse { if($quiz->attempts()->exists()) return back()->withErrors(['quiz'=>'This quiz has attempts and cannot be deleted. Close it instead.']); $id=$quiz->id;$course=$quiz->course_id;$quiz->delete();$this->audit('quiz_deleted',$request,null,['quiz_id'=>$id,'course_id'=>$course]);return back()->with('success','Quiz deleted successfully.'); }
+    public function allocate(Request $request,Quiz $quiz):RedirectResponse { if($quiz->allocation_mode!=='targeted') return back()->withErrors(['quiz'=>'This quiz is course-wide. Change its access mode to Targeted before allocating individual students.']); $data=$request->validate(['user_ids'=>['required','array','min:1'],'user_ids.*'=>['integer','distinct','exists:users,id']]); $eligible=$this->eligibleStudents($quiz->course_id)->whereIn('id',$data['user_ids'])->keyBy('id');$created=[];DB::transaction(function()use($quiz,$eligible,$request,&$created){foreach($eligible as $student){$a=QuizAllocation::firstOrCreate(['quiz_id'=>$quiz->id,'user_id'=>$student->id],['assigned_by'=>$request->user()->id,'assigned_at'=>now()]);if($a->wasRecentlyCreated)$created[]=$student;}});foreach($created as $student){$this->audit('quiz_allocated',$request,$quiz,['student_id'=>$student->id]);try{Notification::send($student->fresh(),new QuizAllocatedNotification($quiz->load('course')));$this->audit('quiz_allocation_email_sent',$request,$quiz,['student_id'=>$student->id,'recipient'=>$student->email]);}catch(Throwable $e){$this->audit('quiz_allocation_email_failed',$request,$quiz,['student_id'=>$student->id,'recipient'=>$student->email,'error'=>$e->getMessage()]);}}return back()->with('success',count($created).' student(s) allocated successfully.'); }
+    public function storeQuestion(Request $request,Quiz $quiz):RedirectResponse { $data=$this->validateQuestion($request); DB::transaction(function()use($quiz,$data){$position=(int)$quiz->questions()->max('position')+1;$options=$data['options']??[];unset($data['options']);$q=$quiz->questions()->create($data+['position'=>$position]);foreach(array_values($options) as $i=>$option)$q->options()->create(['option_text'=>$option['option_text'],'is_correct'=>(bool)$option['is_correct'],'position'=>$i+1]);});$this->audit('quiz_question_created',$request,$quiz);return back()->with('success','Question added successfully.'); }
+    public function updateQuestion(Request $request,QuizQuestion $question):RedirectResponse { $data=$this->validateQuestion($request);$options=$data['options']??[];unset($data['options']);DB::transaction(function()use($question,$data,$options){$question->update($data);$question->options()->delete();foreach(array_values($options) as $i=>$option)$question->options()->create(['option_text'=>$option['option_text'],'is_correct'=>(bool)$option['is_correct'],'position'=>$i+1]);});$this->audit('quiz_question_updated',$request,$question->quiz);return back()->with('success','Question updated successfully.'); }
+    public function destroyQuestion(Request $request,QuizQuestion $question):RedirectResponse { $quiz=$question->quiz;$question->delete();$this->audit('quiz_question_deleted',$request,$quiz,['question_id'=>$question->id]);return back()->with('success','Question deleted successfully.'); }
+
+    private function validateQuiz(Request $r,?Quiz $quiz=null):array{return $r->validate(['course_id'=>['required','integer','exists:courses,id'],'module_id'=>['nullable','integer','exists:course_modules,id'],'lesson_id'=>['nullable','integer','exists:lessons,id'],'title'=>['required','string','max:200'],'slug'=>['nullable','string','max:220','regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',Rule::unique('quizzes','slug')->where(fn($q)=>$q->where('course_id',$r->integer('course_id')))->ignore($quiz?->id)],'description'=>['nullable','string'],'time_limit_minutes'=>['nullable','integer','min:1','max:600'],'passing_score'=>['required','integer','min:0','max:100'],'max_attempts'=>['nullable','integer','min:1','max:100'],'shuffle_questions'=>['boolean'],'shuffle_options'=>['boolean'],'status'=>['required',Rule::in(['draft','published','closed'])],'allocation_mode'=>['required',Rule::in(['course','targeted'])],'available_from'=>['nullable','date'],'due_at'=>['nullable','date','after_or_equal:available_from']]);}
+    private function validateQuestion(Request $r):array{$data=$r->validate(['question'=>['required','string','max:10000'],'type'=>['required',Rule::in(['single_choice','multiple_choice','true_false','short_answer','long_answer'])],'points'=>['required','integer','min:1','max:1000'],'explanation'=>['nullable','string','max:10000'],'options'=>['nullable','array'],'options.*.option_text'=>['required','string','max:2000'],'options.*.is_correct'=>['boolean']]); if(in_array($data['type'],['single_choice','multiple_choice','true_false'],true)&&count($data['options']??[])<2) throw \Illuminate\Validation\ValidationException::withMessages(['options'=>'Choice questions require at least two options.']); return $data;}
+    private function uniqueSlug(string $base,?int $ignore=null,?int $courseId=null):string{$slug=Str::slug($base);$c=$slug;$i=2;while(Quiz::where('course_id',$courseId)->where('slug',$c)->when($ignore,fn($q)=>$q->where('id', '<>', $ignore))->exists())$c=$slug.'-'.$i++;return $c;}
+    private function eligibleStudents(int $courseId){return User::query()->role('Student')->whereHas('courseEnrollments',fn($q)=>$q->where('course_id',$courseId)->whereIn('status',['active','completed'])->whereNotNull('access_granted_at'))->orderBy('name')->get(['id','name','email','avatar_path']);}
+    private function payload(Quiz $q):array{return ['id'=>$q->id,'title'=>$q->title,'slug'=>$q->slug,'course'=>$q->course?->title,'course_id'=>$q->course_id,'description'=>$q->description,'time_limit_minutes'=>$q->time_limit_minutes,'passing_score'=>$q->passing_score,'max_attempts'=>$q->max_attempts,'shuffle_questions'=>$q->shuffle_questions,'shuffle_options'=>$q->shuffle_options,'status'=>$q->status,'allocation_mode'=>$q->allocation_mode,'available_from'=>$q->available_from?->toISOString(),'due_at'=>$q->due_at?->toISOString(),'questions_count'=>$q->questions_count,'attempts_count'=>$q->attempts_count,'allocations_count'=>$q->allocations_count,'updated_at'=>$q->updated_at?->toISOString()];}
+    private function detail(Quiz $q):array{return $this->payload($q)+['questions'=>$q->questions->map(fn($x)=>['id'=>$x->id,'question'=>$x->question,'type'=>$x->type,'points'=>$x->points,'position'=>$x->position,'explanation'=>$x->explanation,'options'=>$x->options->map(fn($o)=>['id'=>$o->id,'option_text'=>$o->option_text,'is_correct'=>$o->is_correct,'position'=>$o->position])->values()->all()])->values()->all(),'allocations'=>$q->allocations->map(fn($x)=>['id'=>$x->id,'user'=>$this->studentPayload($x->user),'assigned_at'=>$x->assigned_at?->toISOString()])->values()->all()];}
+    private function studentPayload(User $u):array{return ['id'=>$u->id,'name'=>$u->name,'email'=>$u->email,'avatar_path'=>$u->avatar_path];}
+    private function adminPayload(Request $r):array{$u=$r->user();return ['id'=>$u->id,'name'=>$u->name,'email'=>$u->email,'avatar_path'=>$u->avatar_path,'email_two_factor_enabled'=>(bool)$u->email_two_factor_enabled];}
+    private function audit(string $event,Request $request,$resource=null,array $meta=[]):void{app(AuditLogService::class)->userEvent($event,$request,['resource_type'=>$resource?class_basename($resource):'quiz','resource_id'=>$resource?->id,'metadata'=>$meta]);}
+}

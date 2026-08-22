@@ -15,6 +15,8 @@ use App\Http\Controllers\AdminModuleLessonController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminSecurityController;
+use App\Http\Controllers\AdminAssignmentController;
+use App\Http\Controllers\AdminQuizController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Controllers\EmailTwoFactorController;
 use App\Http\Controllers\OnboardingController;
@@ -170,6 +172,23 @@ Route::middleware(['auth', AdminMiddleware::class])
         Route::post('/modules-lessons/lessons/{lesson}/move', [AdminModuleLessonController::class, 'moveLesson'])
             ->whereNumber('lesson')
             ->name('modules-lessons.lessons.move');
+
+        Route::get('/assignments', [AdminAssignmentController::class, 'index'])->name('assignments.index');
+        Route::post('/assignments', [AdminAssignmentController::class, 'store'])->name('assignments.store');
+        Route::put('/assignments/{assignment}', [AdminAssignmentController::class, 'update'])->whereNumber('assignment')->name('assignments.update');
+        Route::delete('/assignments/{assignment}', [AdminAssignmentController::class, 'destroy'])->whereNumber('assignment')->name('assignments.destroy');
+        Route::post('/assignments/{assignment}/allocate', [AdminAssignmentController::class, 'allocate'])->whereNumber('assignment')->name('assignments.allocate');
+        Route::post('/assignment-submissions/{submission}/grade', [AdminAssignmentController::class, 'grade'])->whereNumber('submission')->name('assignment-submissions.grade');
+        Route::get('/assignment-submissions/{submission}/download', [AdminAssignmentController::class, 'download'])->whereNumber('submission')->name('assignment-submissions.download');
+
+        Route::get('/quizzes', [AdminQuizController::class, 'index'])->name('quizzes.index');
+        Route::post('/quizzes', [AdminQuizController::class, 'store'])->name('quizzes.store');
+        Route::put('/quizzes/{quiz}', [AdminQuizController::class, 'update'])->whereNumber('quiz')->name('quizzes.update');
+        Route::delete('/quizzes/{quiz}', [AdminQuizController::class, 'destroy'])->whereNumber('quiz')->name('quizzes.destroy');
+        Route::post('/quizzes/{quiz}/allocate', [AdminQuizController::class, 'allocate'])->whereNumber('quiz')->name('quizzes.allocate');
+        Route::post('/quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->whereNumber('quiz')->name('quizzes.questions.store');
+        Route::put('/quiz-questions/{question}', [AdminQuizController::class, 'updateQuestion'])->whereNumber('question')->name('quiz-questions.update');
+        Route::delete('/quiz-questions/{question}', [AdminQuizController::class, 'destroyQuestion'])->whereNumber('question')->name('quiz-questions.destroy');
 
         Route::get('/profile', [
             AdminProfileController::class,

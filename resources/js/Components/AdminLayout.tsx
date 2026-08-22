@@ -27,8 +27,8 @@ const sections = [
         items: [
             { label: 'Courses', href: '/admin/courses', icon: 'book' as const, enabled: true },
             { label: 'Modules & Lessons', href: '/admin/modules-lessons', icon: 'book' as const, enabled: true },
-            { label: 'Assignments', icon: 'assignment' as const, enabled: false },
-            { label: 'Quizzes', icon: 'quiz' as const, enabled: false },
+            { label: 'Assignments', href: '/admin/assignments', icon: 'assignment' as const, enabled: true },
+            { label: 'Quizzes', href: '/admin/quizzes', icon: 'quiz' as const, enabled: true },
             { label: 'Achievements', icon: 'trophy' as const, enabled: false },
         ],
     },

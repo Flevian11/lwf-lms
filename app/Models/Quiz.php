@@ -25,6 +25,7 @@ class Quiz extends Model
         'shuffle_questions',
         'shuffle_options',
         'status',
+        'allocation_mode',
         'available_from',
         'due_at',
     ];
@@ -71,5 +72,10 @@ class Quiz extends Model
     public function attempts(): HasMany
     {
         return $this->hasMany(QuizAttempt::class);
+    }
+
+    public function allocations(): HasMany
+    {
+        return $this->hasMany(QuizAllocation::class);
     }
 }

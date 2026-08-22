@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
+use App\Models\QuizAllocation;
 use App\Models\QuizQuestion;
 use App\Models\User;
 use App\Services\AuditLogService;
@@ -41,6 +42,13 @@ class QuizController extends Controller
             ->with(['course:id,title,slug,thumbnail_path', 'questions:id,quiz_id'])
             ->whereIn('course_id', $courseIds)
             ->where('status', 'published')
+            ->where(function ($query) use ($user) {
+                $query->where('allocation_mode', 'course')
+                    ->orWhere(function ($targeted) use ($user) {
+                        $targeted->where('allocation_mode', 'targeted')
+                            ->whereHas('allocations', fn ($allocation) => $allocation->where('user_id', $user->id));
+                    });
+            })
             ->where(function ($query) {
                 $query
                     ->whereNull('available_from')
@@ -533,10 +541,19 @@ class QuizController extends Controller
             );
         }
 
+        $hasCourseAccess = $this->courseAccessService->hasGrantedEnrollment($user, $quiz->course);
+        $hasAllocation = $quiz->allocation_mode === 'targeted'
+            && QuizAllocation::query()
+                ->where('quiz_id', $quiz->id)
+                ->where('user_id', $user->id)
+                ->exists();
+
         abort_unless(
-            $this->courseAccessService->hasGrantedEnrollment($user, $quiz->course),
+            $hasCourseAccess && ($quiz->allocation_mode === 'course' || $hasAllocation),
             403,
-            'You do not have learning access to this course.',
+            $quiz->allocation_mode === 'targeted'
+                ? 'This quiz has not been allocated to you.'
+                : 'You do not have learning access to this course.',
         );
 
         return $quiz;
