@@ -1,12 +1,22 @@
 import { Head, Link, router } from '@inertiajs/react'
 import type { FormEvent, ReactNode } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type {
     DashboardStats,
-    SearchResult,
     Student,
 } from './student-types'
 import { Icon, assetUrl, initials, formatDate } from './StudentUI'
+import StudentChatbotWidget from './StudentChatbotWidget'
+
+interface StudentSearchResult {
+    type: 'Course' | 'Assignment' | 'Quiz'
+    title: string
+    subtitle: string
+    href: string
+    courseTitle?: string
+    courseHref?: string
+    related?: boolean
+}
 
 interface StudentLayoutProps {
     student: Student
@@ -41,7 +51,6 @@ const learningItems = [
     { label: 'Assignments', href: '/assignments', icon: 'assignment' as const },
     { label: 'Quizzes', href: '/quizzes', icon: 'quiz' as const },
     { label: 'Achievements', href: '/achievements', icon: 'trophy' as const },
-    { label: 'Leaderboard', href: '/leaderboard', icon: 'chart' as const },
 ]
 
 const accountItems = [
@@ -49,6 +58,24 @@ const accountItems = [
     { label: 'Profile', href: '/profile', icon: 'user' as const },
 ]
 
+
+function cleanSearchDisplay(value: unknown, fallback = ''): string {
+    if (typeof value !== 'string' && typeof value !== 'number') return fallback
+
+    const text = String(value).trim()
+    if (!text) return fallback
+
+    if ((text.startsWith('{') && text.endsWith('}')) || (text.startsWith('[') && text.endsWith(']'))) {
+        try {
+            const parsed = JSON.parse(text)
+            if (parsed && typeof parsed === 'object') return fallback
+        } catch {
+            // Not valid JSON; continue with the visible text.
+        }
+    }
+
+    return text.replace(/\s+/g, ' ').slice(0, 180)
+}
 export default function StudentLayout({
     student,
     stats,
@@ -61,8 +88,10 @@ export default function StudentLayout({
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [profileOpen, setProfileOpen] = useState(false)
     const [searchOpen, setSearchOpen] = useState(false)
-    const [assistantOpen, setAssistantOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
+    const [searchResults, setSearchResults] = useState<StudentSearchResult[]>([])
+    const [searchLoading, setSearchLoading] = useState(false)
+    const [searchError, setSearchError] = useState(false)
     const [darkMode, setDarkMode] = useState(false)
 
     const profileRef = useRef<HTMLDivElement>(null)
@@ -100,7 +129,6 @@ export default function StudentLayout({
             setProfileOpen(false)
             setSearchOpen(false)
             setSidebarOpen(false)
-            setAssistantOpen(false)
         }
 
         document.addEventListener('pointerdown', handlePointerDown)
@@ -134,47 +162,54 @@ export default function StudentLayout({
         router.post('/logout')
     }
 
-    const searchResults = useMemo<SearchResult[]>(() => {
-        const query = searchQuery.trim().toLowerCase()
-        if (!query) return []
+    useEffect(() => {
+        const query = searchQuery.trim()
 
-        const results: SearchResult[] = []
+        if (!searchOpen || !query) {
+            setSearchResults([])
+            setSearchLoading(false)
+            setSearchError(false)
+            return
+        }
 
-        searchCourses.forEach((course) => {
-            if (`${course.title} ${course.category ?? ''} ${course.level}`.toLowerCase().includes(query)) {
-                results.push({
-                    type: 'Course',
-                    title: course.title,
-                    subtitle: `${course.category ?? 'Course'} · ${course.progress}% complete`,
-                    href: `/courses/${course.slug}`,
+        const controller = new AbortController()
+        const timer = window.setTimeout(async () => {
+            setSearchLoading(true)
+            setSearchError(false)
+
+            try {
+                const response = await fetch(`/student/search?q=${encodeURIComponent(query)}`, {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                    signal: controller.signal,
                 })
-            }
-        })
 
-        searchAssignments.forEach((item) => {
-            if (`${item.title} ${item.course ?? ''}`.toLowerCase().includes(query)) {
-                results.push({
-                    type: 'Assignment',
-                    title: item.title,
-                    subtitle: `${item.course ?? 'Course'} · ${formatDate(item.due_at)}`,
-                    href: `/assignments/${item.id}`,
-                })
-            }
-        })
+                if (!response.ok) {
+                    throw new Error(`Search failed with status ${response.status}`)
+                }
 
-        searchQuizzes.forEach((item) => {
-            if (`${item.title} ${item.course ?? ''}`.toLowerCase().includes(query)) {
-                results.push({
-                    type: 'Quiz',
-                    title: item.title,
-                    subtitle: `${item.course ?? 'Course'} · ${formatDate(item.due_at)}`,
-                    href: `/quizzes/${item.id}`,
-                })
+                const payload = await response.json()
+                setSearchResults(Array.isArray(payload.results) ? payload.results : [])
+            } catch (error) {
+                if ((error as DOMException)?.name === 'AbortError') return
+                setSearchResults([])
+                setSearchError(true)
+            } finally {
+                if (!controller.signal.aborted) {
+                    setSearchLoading(false)
+                }
             }
-        })
+        }, 180)
 
-        return results.slice(0, 12)
-    }, [searchQuery, searchCourses, searchAssignments, searchQuizzes])
+        return () => {
+            window.clearTimeout(timer)
+            controller.abort()
+        }
+    }, [searchOpen, searchQuery])
+
 
     return (
         <>
@@ -441,102 +476,161 @@ export default function StudentLayout({
                                 </button>
                             </div>
 
-                            <div className="max-h-[55vh] overflow-y-auto p-2">
+                            <div className="max-h-[65vh] overflow-y-auto p-2 sm:p-3">
                                 {!searchQuery.trim() ? (
-                                    <div className="px-6 py-12 text-center">
-                                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
+                                    <div className="px-6 py-14 text-center">
+                                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]">
                                             <Icon name="search" className="h-5 w-5" />
                                         </div>
                                         <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-200">Search your learning space</p>
-                                        <p className="mt-1 text-xs text-slate-400">Search courses, assignments and quizzes instantly.</p>
+                                        <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-400">
+                                            Find courses, assignments and quizzes. Search by title, course, category or level — related learning items are included automatically.
+                                        </p>
+                                    </div>
+                                ) : searchLoading ? (
+                                    <div className="px-6 py-14 text-center">
+                                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]">
+                                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
+                                        </div>
+                                        <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-200">Searching your learning space…</p>
+                                        <p className="mt-1 text-xs text-slate-400">Checking your courses, assignments and quizzes.</p>
+                                    </div>
+                                ) : searchError ? (
+                                    <div className="px-6 py-14 text-center">
+                                        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-red-50 text-red-500 dark:bg-red-500/10 dark:text-red-400">
+                                            <Icon name="support" className="h-5 w-5" />
+                                        </div>
+                                        <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-200">Search is temporarily unavailable</p>
+                                        <p className="mt-1 text-xs leading-5 text-slate-400">Please try the search again in a moment.</p>
                                     </div>
                                 ) : searchResults.length ? (
-                                    <div className="space-y-1">
-                                        {searchResults.map((result) => (
-                                            <Link
-                                                key={`${result.type}-${result.title}-${result.href}`}
-                                                href={result.href}
-                                                onClick={() => setSearchOpen(false)}
-                                                className="flex items-center gap-3 rounded-xl px-3 py-3 transition hover:bg-slate-50 dark:hover:bg-slate-800"
-                                            >
-                                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
-                                                    <Icon name={result.type === 'Quiz' ? 'quiz' : result.type === 'Assignment' ? 'assignment' : 'book'} className="h-4 w-4" />
-                                                </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate text-xs font-semibold text-slate-800 dark:text-slate-100">{result.title}</p>
-                                                    <p className="mt-0.5 truncate text-[10px] text-slate-500 dark:text-slate-400">{result.type} · {result.subtitle}</p>
-                                                </div>
-                                            </Link>
-                                        ))}
+                                    <div className="space-y-4">
+                                        {(['Course', 'Assignment', 'Quiz'] as const).map((type) => {
+                                            const results = searchResults.filter((result) => result.type === type)
+                                            if (!results.length) return null
+
+                                            return (
+                                                <section key={type}>
+                                                    <div className="mb-2 flex items-center justify-between px-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                                                <Icon
+                                                                    name={type === 'Quiz' ? 'quiz' : type === 'Assignment' ? 'assignment' : 'book'}
+                                                                    className="h-3.5 w-3.5"
+                                                                />
+                                                            </div>
+                                                            <h3 className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                                                                {type === 'Course' ? 'Courses' : type === 'Assignment' ? 'Assignments' : 'Quizzes'}
+                                                            </h3>
+                                                        </div>
+                                                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                                                            {results.length}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        {results.map((result) => (
+                                                            <div
+                                                                key={`${result.type}-${result.title}-${result.href}`}
+                                                                className="rounded-2xl border border-slate-100 bg-white p-3 transition hover:border-[#1554c0]/20 hover:bg-[#fbfdff] dark:border-slate-800 dark:bg-slate-900/40 dark:hover:border-[#6ba3ff]/20 dark:hover:bg-slate-900/70"
+                                                            >
+                                                                <div className="flex items-start gap-3">
+                                                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1554c0]/[0.07] text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
+                                                                        <Icon
+                                                                            name={result.type === 'Quiz' ? 'quiz' : result.type === 'Assignment' ? 'assignment' : 'book'}
+                                                                            className="h-4 w-4"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <div className="flex items-start justify-between gap-3">
+                                                                            <Link
+                                                                                href={result.href}
+                                                                                onClick={() => setSearchOpen(false)}
+                                                                                className="min-w-0 text-xs font-bold leading-5 text-slate-800 hover:text-[#1554c0] dark:text-slate-100 dark:hover:text-[#8bb8ff]"
+                                                                            >
+                                                                                {result.title}
+                                                                            </Link>
+                                                                            <Link
+                                                                                href={result.href}
+                                                                                onClick={() => setSearchOpen(false)}
+                                                                                className="shrink-0 rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-[#1554c0] dark:hover:bg-slate-800 dark:hover:text-[#8bb8ff]"
+                                                                                aria-label={`Open ${result.type.toLowerCase()}`}
+                                                                                title={`Open ${result.type.toLowerCase()}`}
+                                                                            >
+                                                                                <Icon name="chevron" className="h-3.5 w-3.5" />
+                                                                            </Link>
+                                                                        </div>
+
+                                                                        <p className="mt-1 text-[10px] leading-4 text-slate-500 dark:text-slate-400">
+                                                                            {cleanSearchDisplay(result.subtitle, result.type === 'Course' ? 'Course' : result.type)}
+                                                                        </p>
+
+                                                                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                                                                            {result.courseHref && result.courseTitle ? (
+                                                                                <>
+                                                                                    <span className="text-[9px] font-medium text-slate-400">Course</span>
+                                                                                    <Link
+                                                                                        href={result.courseHref}
+                                                                                        onClick={() => setSearchOpen(false)}
+                                                                                        className="inline-flex max-w-full items-center gap-1 rounded-lg bg-[#edf4ff] px-2 py-1 text-[9px] font-semibold text-[#1554c0] transition hover:bg-[#e2edff] dark:bg-[#172945] dark:text-[#8bb8ff] dark:hover:bg-[#1c3152]"
+                                                                                    >
+                                                                                        <Icon name="book" className="h-3 w-3 shrink-0" />
+                                                                                        <span className="max-w-[240px] truncate">{cleanSearchDisplay(result.courseTitle, 'Course')}</span>
+                                                                                    </Link>
+                                                                                </>
+                                                                            ) : null}
+
+                                                                            {result.related ? (
+                                                                                <span className="rounded-lg bg-violet-50 px-2 py-1 text-[9px] font-semibold text-violet-600 dark:bg-violet-500/10 dark:text-violet-300">
+                                                                                    Related match
+                                                                                </span>
+                                                                            ) : null}
+
+                                                                            <Link
+                                                                                href={result.href}
+                                                                                onClick={() => setSearchOpen(false)}
+                                                                                className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[9px] font-bold text-slate-500 transition hover:bg-slate-100 hover:text-[#1554c0] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-[#8bb8ff]"
+                                                                            >
+                                                                                View {result.type.toLowerCase()}
+                                                                                <Icon name="chevron" className="h-3 w-3" />
+                                                                            </Link>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </section>
+                                            )
+                                        })}
                                     </div>
                                 ) : (
-                                    <div className="px-6 py-12 text-center">
+                                    <div className="px-6 py-14 text-center">
                                         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
                                             <Icon name="search" className="h-5 w-5" />
                                         </div>
                                         <p className="mt-4 text-sm font-semibold text-slate-700 dark:text-slate-200">No matching content</p>
-                                        <p className="mt-1 text-xs text-slate-400">Try a course, assignment or quiz name.</p>
+                                        <p className="mt-1 text-xs leading-5 text-slate-400">
+                                            Try a course name, assignment title, quiz, category, level or a topic such as “Git”.
+                                        </p>
                                     </div>
                                 )}
                             </div>
 
-                            <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-[10px] text-slate-400 dark:border-slate-800 dark:bg-slate-950/50">
-                                <span>Live dashboard search</span>
+                            <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-slate-50 px-4 py-2.5 text-[10px] text-slate-400 dark:border-slate-800 dark:bg-slate-950/50">
+                                <span>{searchLoading ? 'Searching…' : searchError ? 'Search unavailable' : searchQuery.trim() ? `${searchResults.length} learning result${searchResults.length === 1 ? '' : 's'}` : 'Live learning search'}</span>
                                 <span>Esc to close</span>
                             </div>
                         </div>
                     </div>
                 ) : null}
 
-                <div className="pointer-events-none fixed inset-x-0 bottom-5 z-40 flex justify-end px-5 sm:bottom-6 sm:px-6 lg:pr-7">
+                <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-end px-4 sm:bottom-5 sm:px-5 lg:pr-6">
                     <div className="pointer-events-auto relative">
-                        {assistantOpen ? (
-                            <div className="absolute bottom-[4.5rem] right-0 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_18px_55px_rgba(15,23,42,0.16)] dark:border-slate-700 dark:bg-[#111827] dark:shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
-                                <div className="bg-gradient-to-r from-[#1554c0] to-[#6a5cff] px-4 py-3 text-white">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15">
-                                                <Icon name="chatbot" className="h-4 w-4" />
-                                            </div>
-                                            <div>
-                                                <p className="text-xs font-bold">TechGhost AI</p>
-                                                <p className="text-[10px] text-blue-100">Your learning assistant</p>
-                                            </div>
-                                        </div>
-                                        <button type="button" onClick={() => setAssistantOpen(false)} className="rounded-lg p-1.5 text-white/75 transition hover:bg-white/10 hover:text-white" aria-label="Close TechGhost AI">
-                                            <Icon name="x" className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                                <div className="px-4 py-5 text-center">
-                                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#6ba3ff]">
-                                        <Icon name="sparkles" className="h-5 w-5" />
-                                    </div>
-                                    <p className="mt-3 text-sm font-semibold text-slate-900 dark:text-white">TechGhost AI is ready</p>
-                                    <p className="mx-auto mt-1.5 max-w-[275px] text-xs leading-5 text-slate-500 dark:text-slate-400">
-                                        Ask about your courses, lessons, assignments, quizzes and learning progress.
-                                    </p>
-                                    <span className="mt-4 inline-flex rounded-full bg-slate-100 px-3 py-1 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                                        AI integration coming next
-                                    </span>
-                                </div>
-                            </div>
-                        ) : null}
-
-                        <button
-                            type="button"
-                            onClick={() => setAssistantOpen((open) => !open)}
-                            className="group relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1554c0] to-[#6a5cff] text-white shadow-[0_12px_30px_rgba(21,84,192,0.28)] ring-4 ring-white/80 transition hover:-translate-y-0.5 hover:shadow-[0_16px_34px_rgba(21,84,192,0.34)] dark:ring-[#0b1020]/80"
-                            aria-label="Open TechGhost AI"
-                            aria-expanded={assistantOpen}
-                            title="TechGhost AI"
-                        >
-                            <Icon name="chatbot" className="relative h-6 w-6" />
-                            <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-emerald-400 dark:border-[#0b1020]" />
-                        </button>
+                        <StudentChatbotWidget />
                     </div>
-                </div>
-            </div>
+                </div>            </div>
         </>
     )
 }
