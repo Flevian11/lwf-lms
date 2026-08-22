@@ -17,9 +17,9 @@ class PasskeyLoginResponse implements PasskeyLoginResponseContract
     {
         if ($request->wantsJson()) {
             return new JsonResponse([
-                'redirect' => route(
-                    'dashboard'
-                ),
+                'redirect' => AuthenticatedUserRedirect::to(
+                    $request->user()
+                )->getTargetUrl(),
             ], 200);
         }
 

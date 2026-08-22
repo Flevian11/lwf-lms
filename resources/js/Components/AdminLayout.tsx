@@ -48,7 +48,14 @@ const sections = [
         items: [
             { label: 'Certificates', icon: 'trophy' as const, enabled: false },
             { label: 'Reports', icon: 'chart' as const, enabled: false },
-            { label: 'Security', icon: 'shield' as const, enabled: false },
+            { label: 'Security', href: '/admin/security', icon: 'shield' as const, enabled: true },
+        ],
+    },
+    {
+        label: 'Account',
+        items: [
+            { label: 'Settings', href: '/admin/settings', icon: 'shield' as const, enabled: true },
+            { label: 'Profile', href: '/admin/profile', icon: 'user' as const, enabled: true },
         ],
     },
 ]

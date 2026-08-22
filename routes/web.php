@@ -10,6 +10,9 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminDashboardController;
+use App\Http\Controllers\AdminProfileController;
+use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminSecurityController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Controllers\EmailTwoFactorController;
 use App\Http\Controllers\OnboardingController;
@@ -118,6 +121,42 @@ Route::middleware(['auth', AdminMiddleware::class])
     ->group(function (): void {
         Route::get('/', AdminDashboardController::class)
             ->name('dashboard');
+
+        Route::get('/profile', [
+            AdminProfileController::class,
+            'show',
+        ])->name('profile');
+
+        Route::post('/profile', [
+            AdminProfileController::class,
+            'update',
+        ])->name('profile.update');
+
+        Route::post('/profile/verify-email', [
+            AdminProfileController::class,
+            'sendVerification',
+        ])->name('profile.verify-email');
+
+        Route::get('/settings', AdminSettingsController::class)
+            ->name('settings');
+
+        Route::delete('/settings/audit-logs', [
+            AdminSettingsController::class,
+            'clearAuditLogs',
+        ])->name('settings.audit.clear');
+
+        Route::get('/security', AdminSecurityController::class)
+            ->name('security');
+
+        Route::post('/security/two-factor', [
+            AdminSecurityController::class,
+            'enableTwoFactor',
+        ])->name('security.two-factor.enable');
+
+        Route::delete('/security/two-factor', [
+            AdminSecurityController::class,
+            'disableTwoFactor',
+        ])->name('security.two-factor.disable');
     });
 
 Route::middleware(['auth'])->group(function (): void {

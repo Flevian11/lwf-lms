@@ -11,11 +11,13 @@ class AuditReportService
     /**
      * Return the main audit/reporting dashboard data.
      */
-    public function getOverview(?int $days = 30): array
+    public function getOverview(?int $days = 30, int $auditPage = 1, int $perPage = 10): array
     {
         $days = max(1, min($days ?? 30, 365));
 
         $from = now()->subDays($days);
+        $auditPage = max(1, $auditPage);
+        $perPage = max(5, min($perPage, 50));
 
         return [
             'period' => [
@@ -40,7 +42,10 @@ class AuditReportService
 
             'actors' => $this->actors($from),
 
-            'recent_activity' => $this->recentActivity(),
+            'visiting_hours' => $this->visitingHours($from),
+
+            'recent_activity' => $this->recentActivity($from, $auditPage, $perPage),
+            'audit_pagination' => $this->auditPagination($from, $auditPage, $perPage),
         ];
     }
 
@@ -242,18 +247,45 @@ class AuditReportService
             ]);
     }
 
+
     /**
-     * Latest audit activity.
+     * Page-view distribution by hour of day.
+     *
+     * Kept in PHP so the report remains database-driver agnostic across
+     * local SQLite and production database environments.
      */
-    protected function recentActivity(int $limit = 20): Collection
+    protected function visitingHours($from): Collection
+    {
+        $hours = AuditLog::query()
+            ->where('event_type', 'page_view')
+            ->where('occurred_at', '>=', $from)
+            ->get(['occurred_at'])
+            ->groupBy(function (AuditLog $log): int {
+                return $log->occurred_at
+                    ? $log->occurred_at->copy()->setTimezone(config('app.timezone', 'UTC'))->hour
+                    : 0;
+            });
+
+        return collect(range(0, 23))->map(fn (int $hour) => [
+            'hour' => $hour,
+            'label' => sprintf('%02d:00', $hour),
+            'visits' => $hours->get($hour, collect())->count(),
+        ]);
+    }
+
+    /**
+     * Paginated audit activity for the administrative settings workspace.
+     */
+    protected function recentActivity($from, int $page, int $perPage): Collection
     {
         return AuditLog::query()
             ->with([
-                'user:id,name,email',
+                'user:id,name,email,avatar_path',
             ])
+            ->where('occurred_at', '>=', $from)
             ->latest('occurred_at')
-            ->limit($limit)
-            ->get()
+            ->paginate($perPage, ['*'], 'audit_page', $page)
+            ->getCollection()
             ->map(fn (AuditLog $log) => [
                 'id' => $log->id,
                 'user_id' => $log->user_id,
@@ -262,6 +294,7 @@ class AuditReportService
                         'id' => $log->user->id,
                         'name' => $log->user->name,
                         'email' => $log->user->email,
+                        'avatar_path' => $log->user->avatar_path,
                     ]
                     : null,
                 'actor_type' => $log->actor_type,
@@ -284,4 +317,26 @@ class AuditReportService
                 'occurred_at' => $log->occurred_at,
             ]);
     }
+
+    /**
+     * Pagination metadata for the audit trail.
+     */
+    protected function auditPagination($from, int $page, int $perPage): array
+    {
+        $paginator = AuditLog::query()
+            ->where('occurred_at', '>=', $from)
+            ->latest('occurred_at')
+            ->paginate($perPage, ['id'], 'audit_page', $page);
+
+        return [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+            'from' => $paginator->firstItem(),
+            'to' => $paginator->lastItem(),
+            'has_more_pages' => $paginator->hasMorePages(),
+        ];
+    }
+
 }
