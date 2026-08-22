@@ -180,55 +180,17 @@ export default function Dashboard() {
             searchQuizzes={quizzes}
         >
                         <section className="relative isolate overflow-hidden rounded-[26px] bg-[#10213f] p-6 text-white shadow-[0_18px_45px_rgba(21,84,192,0.14)] sm:p-8 lg:p-9">
-                            <style>{`
-                                @keyframes flevianLiveGradient {
-                                    0% { background-position: 0% 50%; }
-                                    50% { background-position: 100% 50%; }
-                                    100% { background-position: 0% 50%; }
-                                }
-                                @keyframes flevianAuroraOne {
-                                    0%, 100% { transform: translate3d(-12px, -8px, 0) scale(1); }
-                                    50% { transform: translate3d(58px, 28px, 0) scale(1.22); }
-                                }
-                                @keyframes flevianAuroraTwo {
-                                    0%, 100% { transform: translate3d(22px, -18px, 0) scale(1); }
-                                    50% { transform: translate3d(-55px, 36px, 0) scale(1.18); }
-                                }
-                                @keyframes flevianAuroraThree {
-                                    0%, 100% { transform: translate3d(0, 22px, 0) scale(1); }
-                                    50% { transform: translate3d(-25px, -28px, 0) scale(1.2); }
-                                }
-                                @media (prefers-reduced-motion: reduce) {
-                                    .flevian-live-gradient,
-                                    .flevian-aurora {
-                                        animation: none !important;
-                                    }
-                                }
-                            `}</style>
-
-                            <div
-                                className="flevian-live-gradient pointer-events-none absolute -inset-[35%] opacity-100"
-                                style={{
-                                    background:
-                                        'linear-gradient(120deg, #10213f 0%, #173b72 25%, #285fc4 48%, #4438a8 68%, #173b72 82%, #10213f 100%)',
-                                    backgroundSize: '260% 260%',
-                                    animation: 'flevianLiveGradient 18s ease-in-out infinite',
-                                }}
+                            <video
+                                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                                src="/videos/dashboard-bg.mp4"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                                aria-hidden="true"
                             />
-                            <div
-                                className="flevian-aurora pointer-events-none absolute -left-28 -top-32 h-80 w-80 rounded-full bg-[#6ba3ff]/35 blur-[70px]"
-                                style={{ animation: 'flevianAuroraOne 11s ease-in-out infinite' }}
-                            />
-                            <div
-                                className="flevian-aurora pointer-events-none absolute -right-28 -top-24 h-96 w-96 rounded-full bg-[#7566ff]/30 blur-[80px]"
-                                style={{ animation: 'flevianAuroraTwo 14s ease-in-out infinite' }}
-                            />
-                            <div
-                                className="flevian-aurora pointer-events-none absolute -bottom-40 left-[35%] h-80 w-80 rounded-full bg-[#3487ff]/25 blur-[75px]"
-                                style={{ animation: 'flevianAuroraThree 16s ease-in-out infinite' }}
-                            />
-                            <div className="pointer-events-none absolute inset-0 bg-[#071225]/25 backdrop-blur-[2px]" />
-                            <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:linear-gradient(rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)] [background-size:42px_42px]" />
+                            <div className="pointer-events-none absolute inset-0 bg-[#071225]/55 dark:bg-[#020817]/70" />
+                            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#1554c0]/25 via-transparent to-[#4438a8]/30" />
 
                             <div className="relative flex flex-col justify-between gap-7 lg:flex-row lg:items-end">
                                 <div className="max-w-2xl">

@@ -82,18 +82,31 @@ export default function Support() {
             >
                 <div className="w-full px-4 py-4 sm:px-5 lg:px-6">
                     {/* Header */}
-                    <div className="mb-4">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#1554c0] dark:text-[#6ba3ff]">
-                            Help centre
-                        </p>
-                        <h1 className="mt-0.5 text-2xl font-bold tracking-[-0.03em] text-slate-950 dark:text-white">
-                            Support & learning help
-                        </h1>
-                        <p className="mt-0.5 max-w-2xl text-[11px] leading-4 text-slate-500 dark:text-slate-400">
-                            Find quick answers, jump directly to the part of the portal you need,
-                            or ask TechGhost AI for guidance.
-                        </p>
-                    </div>
+                    <section className="relative isolate mb-4 overflow-hidden rounded-[26px] bg-[#10213f] p-6 text-white shadow-[0_18px_45px_rgba(21,84,192,0.14)] sm:p-8">
+                        <video
+                            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                            src="/videos/support-bg.mp4"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            aria-hidden="true"
+                        />
+                        <div className="pointer-events-none absolute inset-0 bg-[#071225]/55 dark:bg-[#020817]/70" />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#1554c0]/25 via-transparent to-[#4438a8]/30" />
+                        <div className="relative">
+                            <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-blue-100/80">
+                                Help centre
+                            </p>
+                            <h1 className="mt-0.5 text-2xl font-bold tracking-[-0.03em] text-white">
+                                Support & learning help
+                            </h1>
+                            <p className="mt-0.5 max-w-2xl text-[11px] leading-4 text-blue-100/80">
+                                Find quick answers, jump directly to the part of the portal you need,
+                                or ask TechGhost AI for guidance.
+                            </p>
+                        </div>
+                    </section>
 
                     {/* Summary */}
                     <div className="grid gap-2.5 sm:grid-cols-3">
