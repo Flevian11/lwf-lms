@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmailTwoFactorController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\StudentCoursesController;
@@ -27,9 +28,7 @@ use Inertia\Inertia;
 |--------------------------------------------------------------------------
 */
 
-Route::get('/', function () {
-    return Inertia::render('Home');
-})->name('home');
+Route::get('/', PublicHomeController::class)->name('home');
 
 /*
 |--------------------------------------------------------------------------
