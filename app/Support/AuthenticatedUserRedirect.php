@@ -16,7 +16,7 @@ class AuthenticatedUserRedirect
          * Admins never go through student onboarding.
          */
         if ($user->hasRole('Admin')) {
-            return redirect()->route('dashboard');
+            return redirect()->route('admin.dashboard');
         }
 
         /*

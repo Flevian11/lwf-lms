@@ -9,6 +9,8 @@ use App\Http\Controllers\StudentSearchController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\AdminDashboardController;
+use App\Http\Middleware\AdminMiddleware;
 use App\Http\Controllers\EmailTwoFactorController;
 use App\Http\Controllers\OnboardingController;
 use App\Http\Controllers\ProfileController;
@@ -109,6 +111,14 @@ Route::middleware(['guest'])->group(function (): void {
 | Authenticated Application
 |--------------------------------------------------------------------------
 */
+
+Route::middleware(['auth', AdminMiddleware::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function (): void {
+        Route::get('/', AdminDashboardController::class)
+            ->name('dashboard');
+    });
 
 Route::middleware(['auth'])->group(function (): void {
 
