@@ -1,113 +1,81 @@
 import { Head, Link } from '@inertiajs/react'
-import { useEffect, useMemo, useState } from 'react'
-import { Icon, assetUrl } from '../Components/StudentUI'
-
-interface HomeStats {
-    published_courses: number
-    learners: number
-    published_lessons: number
-    completed_enrollments: number
-}
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 interface CourseItem {
     id: number
     title: string
     slug: string
     short_description: string | null
-    description: string | null
     thumbnail_path: string | null
-    level: string | null
-    category: string | null
+    level: string
     access_type: string | null
     price: string | number | null
     currency: string | null
-    module_count: number
-    lesson_count: number
-}
-
-interface CategoryItem {
-    id: number
-    name: string
-    slug: string
-    course_count: number
+    category: { name: string; slug: string } | null
+    modules_count: number
+    lessons_count: number
 }
 
 interface AchievementItem {
     id: number
     name: string
-    slug: string
-    description: string | null
+    description: string
     icon: string | null
     points: number
 }
 
 interface Props {
-    authenticated: boolean
-    stats: HomeStats
     courses: CourseItem[]
-    categories: CategoryItem[]
+    publishedCourses: number
+    publishedLessons: number
     achievements: AchievementItem[]
 }
 
-const formatNumber = new Intl.NumberFormat('en-KE')
-const lightHeroVideo = '/videos/herobg1.mp4'
-const darkHeroVideo = '/videos/herobg2.mp4'
+const LIGHT_VIDEO = '/videos/hero-bg2.mp4'
+const DARK_VIDEO = '/videos/hero-bg1.mp4'
+const CTA_VIDEO = '/videos/cta-bg.mp4'
+const SITE_URL = 'https://lwf.yaliid.cloud'
 
-function levelLabel(level: string | null) {
-    if (!level) return 'Learning path'
-    return level.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+function assetUrl(path: string | null): string | null {
+    if (!path) return null
+    if (/^(https?:\/\/|\/)/.test(path)) return path
+    return `/storage/${path}`
 }
 
-function priceLabel(course: CourseItem) {
-    const access = (course.access_type ?? '').toLowerCase()
-    const amount = Number(course.price ?? 0)
+function formatPrice(price: string | number | null, currency: string | null, accessType: string | null) {
+    if (accessType === 'free' || accessType === 'free_for_demo') return 'Free'
+    if (price === null || price === undefined || price === '') return 'Contact for access'
 
-    if (access === 'free' || amount === 0) return 'Free'
-
-    return `${course.currency || 'KES'} ${formatNumber.format(amount)}`
+    return `${currency || 'KES'} ${Number(price).toLocaleString('en-KE')}`
 }
 
-function courseIcon(course: CourseItem) {
-    const value = `${course.category ?? ''} ${course.title}`.toLowerCase()
-    if (value.includes('quiz') || value.includes('assessment')) return 'quiz' as const
-    if (value.includes('assignment')) return 'assignment' as const
-    if (value.includes('career') || value.includes('skill')) return 'chart' as const
-    return 'book' as const
+function levelLabel(value: string): string {
+    return value.replace(/[_-]+/g, ' ').replace(/\b\w/g, char => char.toUpperCase())
 }
 
-function achievementIcon(icon: string | null) {
-    if (icon === 'assignment') return 'assignment' as const
-    if (icon === 'quiz') return 'quiz' as const
-    if (icon === 'chart') return 'chart' as const
-    return 'trophy' as const
-}
-
-export default function Home({
-    authenticated,
-    stats,
-    courses = [],
-    categories = [],
-    achievements = [],
-}: Props) {
+export default function Home({ courses, publishedCourses, publishedLessons, achievements }: Props) {
     const [darkMode, setDarkMode] = useState(false)
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [expandedCourse, setExpandedCourse] = useState<number | null>(null)
+    const lightRef = useRef<HTMLVideoElement>(null)
+    const darkRef = useRef<HTMLVideoElement>(null)
 
     useEffect(() => {
         const stored = window.localStorage.getItem('learn-with-flevian-theme')
         const preferredDark = stored === 'dark'
             ? true
             : stored === 'light'
-                ? false
-                : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? false
+              : window.matchMedia('(prefers-color-scheme: dark)').matches
 
         setDarkMode(preferredDark)
         document.documentElement.classList.toggle('dark', preferredDark)
         document.documentElement.style.colorScheme = preferredDark ? 'dark' : 'light'
-
-        return () => {
-            document.documentElement.style.colorScheme = ''
-        }
     }, [])
+
+    useEffect(() => {
+        const active = darkMode ? darkRef.current : lightRef.current
+        active?.play().catch(() => undefined)
+    }, [darkMode])
 
     const toggleTheme = () => {
         const next = !darkMode
@@ -117,396 +85,262 @@ export default function Home({
         window.localStorage.setItem('learn-with-flevian-theme', next ? 'dark' : 'light')
     }
 
-    const featuredCourses = useMemo(() => courses.slice(0, 6), [courses])
-    const visibleCategories = useMemo(() => categories.slice(0, 6), [categories])
-    const visibleAchievements = useMemo(() => achievements.slice(0, 4), [achievements])
-
-    // These four figures are intentionally marketing-facing sample figures.
-    // Course, category and achievement content remains database-driven below.
-    const showcaseStats = [
-        { value: '12+', label: 'Courses', note: 'Expertly crafted', icon: 'book' as const },
-        { value: '150+', label: 'Lessons', note: 'Easy to follow', icon: 'chart' as const },
-        { value: '1,200+', label: 'Learners', note: 'Growing daily', icon: 'user' as const },
-        { value: '98%', label: 'Satisfaction', note: 'From our learners', icon: 'sparkles' as const },
-    ]
+    const categories = useMemo(() => {
+        const map = new Map<string, { name: string; slug: string; count: number }>()
+        courses.forEach(course => {
+            if (!course.category) return
+            const current = map.get(course.category.slug)
+            map.set(course.category.slug, {
+                name: course.category.name,
+                slug: course.category.slug,
+                count: (current?.count || 0) + 1,
+            })
+        })
+        return Array.from(map.values())
+    }, [courses])
 
     return (
         <>
-            <Head title="Learn With Flevian" />
+            <Head>
+                <title>Learn With Flevian — Online Learning &amp; Skills Platform in Kenya</title>
+                <meta name="description" content="Learn With Flevian is an online learning platform for practical courses, programming, web development, technology skills, structured learning and meaningful achievements." />
+                <meta name="keywords" content="online learning Kenya, LMS Kenya, online courses Kenya, programming courses, web development courses, coding courses, technology education, digital skills, online certificates, Learn With Flevian, Flevian LMS" />
+                <meta name="author" content="Flevian Ochoka" />
+                <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+                <meta name="theme-color" content="#1554c0" />
+                <meta name="geo.region" content="KE" />
+                <meta name="geo.placename" content="Nairobi" />
+                <link rel="canonical" href={`${SITE_URL}/`} />
+                <link rel="alternate" href={`${SITE_URL}/`} hrefLang="en-ke" />
+                <link rel="alternate" href={`${SITE_URL}/`} hrefLang="en" />
+                <link rel="alternate" href={`${SITE_URL}/`} hrefLang="x-default" />
+                <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+                <meta property="og:type" content="website" />
+                <meta property="og:url" content={`${SITE_URL}/`} />
+                <meta property="og:title" content="Learn With Flevian — Practical Online Learning in Kenya" />
+                <meta property="og:description" content="Build practical skills through focused online courses, structured learning and achievements with Learn With Flevian LMS." />
+                <meta property="og:site_name" content="Learn With Flevian LMS" />
+                <meta property="og:locale" content="en_KE" />
+                <meta name="twitter:card" content="summary" />
+                <meta name="twitter:title" content="Learn With Flevian — Online Learning Platform" />
+                <meta name="twitter:description" content="Practical courses, focused learning and meaningful achievements from Learn With Flevian LMS." />
+                <script type="application/ld+json">{JSON.stringify({
+                    '@context': 'https://schema.org',
+                    '@type': 'EducationalOrganization',
+                    name: 'Learn With Flevian LMS',
+                    description: 'Online learning platform offering practical courses, structured learning and achievements.',
+                    url: SITE_URL,
+                    logo: `${SITE_URL}/favicon-32x32.png`,
+                    address: { '@type': 'PostalAddress', addressCountry: 'KE', addressLocality: 'Nairobi' },
+                    knowsAbout: ['Online learning', 'Programming', 'Web development', 'Technology skills', 'Digital skills'],
+                    hasCourse: courses.slice(0, 6).map(course => ({
+                        '@type': 'Course',
+                        name: course.title,
+                        description: course.short_description || `Learn ${course.title} through structured online lessons.`,
+                        url: `${SITE_URL}/#courses`,
+                        provider: { '@type': 'EducationalOrganization', name: 'Learn With Flevian LMS', sameAs: SITE_URL },
+                    })),
+                })}</script>
+            </Head>
 
-            <div className="min-h-screen overflow-x-hidden bg-[#f4f7fc] text-[#172033] transition-colors duration-500 dark:bg-[#070c16] dark:text-[#edf2fa]">
-                {/* Navigation */}
-                <header className="fixed inset-x-0 top-0 z-50">
-                    <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
-                        <nav className="rounded-2xl border border-white/70 bg-white/80 px-3 py-2.5 shadow-[0_12px_35px_rgba(20,48,92,0.08)] backdrop-blur-2xl transition-colors duration-500 dark:border-white/10 dark:bg-[#0b1220]/75 dark:shadow-[0_15px_40px_rgba(0,0,0,0.25)]">
-                            <div className="flex h-11 items-center gap-3">
-                                <Link href="/" className="flex min-w-0 items-center gap-2.5">
-                                    <img
-                                        src="/favicon-192x192.png"
-                                        alt="Learn With Flevian"
-                                        className="h-9 w-9 rounded-xl object-contain ring-1 ring-slate-200 dark:ring-slate-700"
-                                    />
-                                    <div className="min-w-0">
-                                        <p className="truncate text-[13px] font-bold tracking-[-0.025em]">Learn With Flevian</p>
-                                        <p className="hidden text-[9px] font-medium text-slate-500 dark:text-slate-400 sm:block">Learn. Practice. Achieve.</p>
-                                    </div>
-                                </Link>
-
-                                <div className="ml-auto hidden items-center gap-1 md:flex">
-                                    {[
-                                        ['Courses', '#courses'],
-                                        ['Achievements', '#achievements'],
-                                        ['How it works', '#how-it-works'],
-                                    ].map(([label, href]) => (
-                                        <a key={href} href={href} className="rounded-lg px-3 py-2 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white">
-                                            {label}
-                                        </a>
-                                    ))}
-                                </div>
-
-                                <div className="ml-auto flex items-center gap-1.5 md:ml-2">
-                                    <button
-                                        type="button"
-                                        onClick={toggleTheme}
-                                        aria-label={darkMode ? 'Use light theme' : 'Use dark theme'}
-                                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
-                                    >
-                                        <Icon name={darkMode ? 'sun' : 'moon'} className="h-4 w-4" />
-                                    </button>
-
-                                    <Link
-                                        href={authenticated ? '/dashboard' : '/login'}
-                                        className="hidden rounded-lg px-3 py-2 text-[11px] font-bold text-slate-600 transition hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5 sm:inline-flex"
-                                    >
-                                        {authenticated ? 'Dashboard' : 'Sign in'}
-                                    </Link>
-
-                                    <Link
-                                        href={authenticated ? '/courses' : '/register'}
-                                        className="rounded-lg bg-[#1554c0] px-3.5 py-2 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#1249a8]"
-                                    >
-                                        {authenticated ? 'My courses' : 'Get started'}
-                                    </Link>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => setMobileMenuOpen((value) => !value)}
-                                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5 md:hidden"
-                                        aria-label="Toggle navigation"
-                                    >
-                                        <Icon name={mobileMenuOpen ? 'x' : 'menu'} className="h-4 w-4" />
-                                    </button>
-                                </div>
+            <main className="min-h-screen bg-[#f4f7fc] text-[#172033] transition-colors duration-500 dark:bg-[#080d18] dark:text-[#edf2fa]">
+                <header className="relative z-30 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-slate-800/70 dark:bg-[#0b1220]/85">
+                    <div className="mx-auto flex h-[76px] max-w-[1240px] items-center justify-between px-5 sm:px-8">
+                        <a href="#top" className="flex items-center gap-3">
+                            <img src="/favicon-192x192.png" alt="Learn With Flevian" className="h-10 w-10 rounded-xl object-contain ring-1 ring-slate-200 dark:ring-slate-700" />
+                            <div>
+                                <p className="text-[13px] font-bold tracking-[-0.02em]">Learn With Flevian</p>
+                                <p className="text-[9px] font-medium text-slate-500 dark:text-slate-400">Learning platform</p>
                             </div>
+                        </a>
 
-                            {mobileMenuOpen && (
-                                <div className="border-t border-slate-100 pt-2.5 dark:border-white/10 md:hidden">
-                                    <div className="grid grid-cols-3 gap-1">
-                                        <a href="#courses" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-2 py-2 text-center text-[10px] font-semibold text-slate-500 dark:text-slate-300">Courses</a>
-                                        <a href="#achievements" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-2 py-2 text-center text-[10px] font-semibold text-slate-500 dark:text-slate-300">Achievements</a>
-                                        <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-2 py-2 text-center text-[10px] font-semibold text-slate-500 dark:text-slate-300">How it works</a>
-                                    </div>
-                                </div>
-                            )}
+                        <nav className="hidden items-center gap-7 text-[12px] font-semibold text-slate-500 md:flex dark:text-slate-400">
+                            <a className="text-[#1554c0]" href="#top">Home</a>
+                            <a href="#courses" className="transition hover:text-[#1554c0]">Courses</a>
+                            <a href="#achievements" className="transition hover:text-[#1554c0]">Achievements</a>
+                            <a href="#how-it-works" className="transition hover:text-[#1554c0]">How it works</a>
                         </nav>
+
+                        <div className="flex items-center gap-2.5">
+                            <button type="button" onClick={toggleTheme} aria-label="Toggle theme" className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:text-[#1554c0] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+                                <span className="text-sm">{darkMode ? '☀' : '◐'}</span>
+                            </button>
+                            <Link href="/login" className="hidden rounded-xl px-3 py-2 text-[11px] font-bold text-slate-600 sm:block dark:text-slate-300">Sign in</Link>
+                            <Link href="/register" className="rounded-xl bg-[#1554c0] px-4 py-2.5 text-[11px] font-bold text-white shadow-[0_8px_20px_rgba(21,84,192,.22)] transition hover:bg-[#1249a7]">Get started</Link>
+                        </div>
                     </div>
                 </header>
 
-                {/* Hero */}
-                <section className="relative isolate min-h-[760px] overflow-hidden pt-24 sm:min-h-[790px] lg:min-h-[820px]">
-                    <div className="absolute inset-0 -z-20 overflow-hidden bg-[#dce8f8] dark:bg-[#07101f]">
-                        <video
-                            key={lightHeroVideo}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            preload="metadata"
-                            className={`absolute inset-[-4%] h-[108%] w-[108%] object-cover blur-[8px] transition-opacity duration-[1400ms] ease-out ${darkMode ? 'opacity-0' : 'opacity-100'}`}
-                        >
-                            <source src={lightHeroVideo} type="video/mp4" />
-                        </video>
-                        <video
-                            key={darkHeroVideo}
-                            autoPlay
-                            muted
-                            loop
-                            playsInline
-                            preload="metadata"
-                            className={`absolute inset-[-4%] h-[108%] w-[108%] object-cover blur-[8px] transition-opacity duration-[1400ms] ease-out ${darkMode ? 'opacity-100' : 'opacity-0'}`}
-                        >
-                            <source src={darkHeroVideo} type="video/mp4" />
-                        </video>
-                        <div className="absolute inset-0 bg-white/65 dark:bg-[#07101f]/72" />
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_35%,rgba(44,111,211,0.24),transparent_35%),radial-gradient(circle_at_85%_55%,rgba(76,139,226,0.18),transparent_34%)] dark:bg-[radial-gradient(circle_at_15%_35%,rgba(41,112,215,0.18),transparent_35%),radial-gradient(circle_at_85%_55%,rgba(30,77,148,0.24),transparent_34%)]" />
-                    </div>
+                <section id="top" className="relative isolate overflow-hidden border-b border-slate-200/60 dark:border-slate-800/70">
+                    <div className="absolute inset-0 bg-[#eef4ff] dark:bg-[#071225]" />
+                    <video ref={lightRef} className={`absolute inset-0 h-full w-full object-cover scale-[1.04] blur-[5px] transition-opacity duration-[1200ms] ${darkMode ? 'opacity-0' : 'opacity-[.70]'}`} src={LIGHT_VIDEO} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
+                    <video ref={darkRef} className={`absolute inset-0 h-full w-full object-cover scale-[1.04] blur-[5px] transition-opacity duration-[1200ms] ${darkMode ? 'opacity-[.52]' : 'opacity-0'}`} src={DARK_VIDEO} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
+                    <div className="absolute inset-0 bg-white/40 dark:bg-[#071225]/62" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/70 via-white/40 to-[#f4f7fc] dark:from-[#071225]/70 dark:via-[#071225]/55 dark:to-[#080d18]" />
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_28%,rgba(21,84,192,.16),transparent_48%)] dark:bg-[radial-gradient(circle_at_50%_28%,rgba(67,121,255,.18),transparent_48%)]" />
 
-                    <div className="mx-auto flex max-w-7xl flex-col px-4 pb-24 sm:px-6 lg:px-8">
-                        <div className="grid flex-1 items-center gap-12 pt-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.75fr)] lg:gap-16 lg:pt-20">
-                            <div className="max-w-3xl">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/65 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#1554c0] shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-white/5 dark:text-[#79aefc]">
-                                    <span className="h-1.5 w-1.5 rounded-full bg-[#1554c0] shadow-[0_0_0_4px_rgba(21,84,192,0.12)] dark:bg-[#79aefc]" />
-                                    Learn with purpose
-                                </div>
+                    <div className="relative mx-auto flex min-h-[720px] max-w-[1240px] flex-col items-center justify-center px-5 py-24 text-center sm:px-8 sm:py-28 lg:py-32">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-[#1554c0]/15 bg-white/80 px-3.5 py-2 text-[9px] font-bold uppercase tracking-[.2em] text-[#1554c0] shadow-sm backdrop-blur-md dark:border-blue-300/15 dark:bg-[#101b31]/75 dark:text-[#8bb8ff]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#1554c0] dark:bg-[#8bb8ff]" />
+                            Empower. Learn. Achieve.
+                        </span>
 
-                                <h1 className="mt-6 max-w-3xl text-5xl font-semibold leading-[0.98] tracking-[-0.055em] text-[#111827] sm:text-6xl lg:text-[76px] dark:text-white">
-                                    Build skills that move you{' '}
-                                    <span className="text-[#1554c0] dark:text-[#75aafb]">forward.</span>
-                                </h1>
+                        <h1 className="mt-7 max-w-5xl text-[46px] font-bold leading-[.98] tracking-[-.055em] text-[#0b1020] sm:text-[66px] lg:text-[78px] dark:text-white">
+                            Build skills that move <span className="text-[#1554c0] dark:text-[#78aaff]">you</span><br className="hidden sm:block" /> forward.
+                        </h1>
 
-                                <p className="mt-7 max-w-xl text-sm leading-7 text-slate-600 sm:text-base dark:text-slate-300">
-                                    A focused learning space for practical courses, structured practice, and achievements you can carry into your next opportunity.
-                                </p>
+                        <p className="mt-6 max-w-2xl text-[14px] leading-6 text-slate-600 sm:text-[16px] dark:text-slate-300">
+                            Practical courses, focused learning paths, and achievements designed to help you learn with confidence and turn knowledge into progress.
+                        </p>
 
-                                <div className="mt-8 flex flex-wrap items-center gap-3">
-                                    <Link
-                                        href={authenticated ? '/courses' : '/register'}
-                                        className="group inline-flex items-center gap-2 rounded-xl bg-[#1554c0] px-5 py-3 text-[11px] font-bold text-white shadow-[0_12px_28px_rgba(21,84,192,0.24)] transition hover:-translate-y-0.5 hover:bg-[#1249a8]"
-                                    >
-                                        Explore learning
-                                        <Icon name="arrow" className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                                    </Link>
-                                    <a href="#how-it-works" className="inline-flex items-center gap-2 rounded-xl border border-white/80 bg-white/55 px-5 py-3 text-[11px] font-bold text-slate-700 shadow-sm backdrop-blur-xl transition hover:bg-white dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10">
-                                        See how it works
-                                    </a>
-                                </div>
-
-                                <div className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                                    <span className="inline-flex items-center gap-1.5"><Icon name="check" className="h-3.5 w-3.5 text-[#1554c0] dark:text-[#75aafb]" /> Structured courses</span>
-                                    <span className="inline-flex items-center gap-1.5"><Icon name="check" className="h-3.5 w-3.5 text-[#1554c0] dark:text-[#75aafb]" /> Practical learning</span>
-                                    <span className="inline-flex items-center gap-1.5"><Icon name="check" className="h-3.5 w-3.5 text-[#1554c0] dark:text-[#75aafb]" /> Recognized achievements</span>
-                                </div>
-                            </div>
-
-                            <div className="relative mx-auto w-full max-w-[430px] lg:ml-auto">
-                                <div className="absolute -inset-6 rounded-[34px] bg-[#1554c0]/10 blur-3xl dark:bg-[#2f7be0]/10" />
-                                <div className="relative overflow-hidden rounded-[30px] border border-white/75 bg-white/55 p-4 shadow-[0_30px_80px_rgba(20,48,92,0.18)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0b1423]/65 dark:shadow-[0_35px_80px_rgba(0,0,0,0.35)]">
-                                    <div className="rounded-[23px] border border-slate-200/80 bg-white/85 p-4 dark:border-white/10 dark:bg-[#0e1727]/90">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-slate-400">Learning desk</p>
-                                                <p className="mt-1 text-sm font-bold">Your next step</p>
-                                            </div>
-                                            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#eaf2ff] text-[#1554c0] dark:bg-[#13294a] dark:text-[#75aafb]">
-                                                <Icon name="target" className="h-4 w-4" />
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 rounded-2xl bg-[#f4f7fc] p-4 dark:bg-[#111c2e]">
-                                            <div className="flex items-start gap-3">
-                                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-[#1554c0] shadow-sm dark:bg-[#17253a] dark:text-[#75aafb]">
-                                                    <Icon name="book" className="h-5 w-5" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">Featured pathway</p>
-                                                    <p className="mt-1 text-sm font-bold leading-5">Learn at your pace. Practice as you go.</p>
-                                                </div>
-                                            </div>
-                                            <div className="mt-5 flex items-center gap-2">
-                                                <span className="h-1.5 flex-1 rounded-full bg-[#dce7f8] dark:bg-[#22334d]" />
-                                                <span className="h-1.5 w-1/3 rounded-full bg-[#1554c0] dark:bg-[#75aafb]" />
-                                            </div>
-                                            <div className="mt-2 flex justify-between text-[9px] font-semibold text-slate-400">
-                                                <span>Learn</span><span>Practice</span><span>Achieve</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-3 grid grid-cols-2 gap-3">
-                                            <div className="rounded-2xl border border-slate-200/80 bg-white p-3 dark:border-white/10 dark:bg-[#111c2e]">
-                                                <p className="text-lg font-bold">01</p>
-                                                <p className="mt-1 text-[9px] font-semibold text-slate-400">Choose a course</p>
-                                            </div>
-                                            <div className="rounded-2xl border border-slate-200/80 bg-white p-3 dark:border-white/10 dark:bg-[#111c2e]">
-                                                <p className="text-lg font-bold">02</p>
-                                                <p className="mt-1 text-[9px] font-semibold text-slate-400">Build momentum</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div className="mt-8 flex flex-wrap justify-center gap-3">
+                            <a href="#courses" className="rounded-xl bg-[#1554c0] px-5 py-3 text-[11px] font-bold text-white shadow-[0_12px_28px_rgba(21,84,192,.25)] transition hover:-translate-y-0.5 hover:bg-[#1249a7]">Explore courses <span className="ml-1">→</span></a>
+                            <a href="#how-it-works" className="rounded-xl border border-slate-300/80 bg-white/75 px-5 py-3 text-[11px] font-bold text-slate-700 backdrop-blur-md transition hover:-translate-y-0.5 dark:border-slate-700 dark:bg-[#101827]/75 dark:text-slate-200">See how it works</a>
                         </div>
 
-                        {/* Marketing-only showcase stats */}
-                        <div className="relative z-10 mt-10 overflow-hidden rounded-[24px] border border-white/80 bg-white/90 shadow-[0_18px_55px_rgba(20,48,92,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#0d1625]/90 dark:shadow-[0_18px_55px_rgba(0,0,0,0.28)]">
-                            <div className="grid grid-cols-2 md:grid-cols-4">
-                                {showcaseStats.map((item, index) => (
-                                    <div key={item.label} className={`flex items-center gap-3 px-5 py-4 sm:px-7 ${index > 0 ? 'border-t border-slate-200/80 md:border-l md:border-t-0 dark:border-white/10' : ''}`}>
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#13294a] dark:text-[#75aafb]">
-                                            <Icon name={item.icon} className="h-4 w-4" />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <p className="text-lg font-bold leading-none tracking-[-0.03em]">{item.value}</p>
-                                            <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.08em] text-slate-500 dark:text-slate-400">{item.label}</p>
-                                            <p className="mt-0.5 text-[9px] font-medium text-slate-400">{item.note}</p>
-                                        </div>
+                        <div className="mt-16 grid w-full max-w-[900px] grid-cols-2 overflow-hidden rounded-[22px] border border-slate-200/80 bg-white/88 text-left shadow-[0_24px_60px_rgba(30,60,120,.12)] backdrop-blur-xl sm:grid-cols-4 dark:border-slate-700/80 dark:bg-[#0f192a]/88 dark:shadow-[0_24px_60px_rgba(0,0,0,.22)]">
+                            {[
+                                [publishedCourses || 0, 'Courses', 'Published learning'],
+                                [publishedLessons || 0, 'Lessons', 'Practical & focused'],
+                                ['1,200+', 'Learners', 'Growing every day'],
+                                ['98%', 'Satisfaction', 'Built around learners'],
+                            ].map(([value, label, detail], index) => (
+                                <div key={label} className={`flex items-center gap-3 px-4 py-4 sm:px-5 ${index > 1 ? 'border-t border-slate-200/80 sm:border-t-0' : ''} ${index % 2 === 1 ? 'border-l border-slate-200/80 sm:border-l' : ''} dark:border-slate-700/80`}>
+                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]">{index === 3 ? '★' : index === 2 ? '♙' : index === 1 ? '▱' : '▣'}</div>
+                                    <div className="min-w-0">
+                                        <p className="text-[18px] font-bold tracking-[-.03em] text-slate-900 dark:text-white">{value}</p>
+                                        <p className="text-[8px] font-bold uppercase tracking-[.12em] text-slate-400">{label}</p>
+                                        <p className="mt-0.5 truncate text-[8px] text-slate-400">{detail}</p>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>
 
-                {/* Course catalogue */}
-                <section id="courses" className="scroll-mt-24 border-t border-slate-200/70 bg-[#f4f7fc] py-20 dark:border-white/5 dark:bg-[#070c16] sm:py-24">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-                            <div className="max-w-2xl">
-                                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#1554c0] dark:text-[#75aafb]">
-                                    <span className="h-px w-7 bg-current" /> Course library
-                                </div>
-                                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Choose your next learning path.</h2>
-                                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">Browse the published catalogue and find a focused course that fits what you want to build next.</p>
-                            </div>
-                            <Link href="/courses" className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-bold text-slate-700 shadow-sm transition hover:border-[#b9d1f6] hover:text-[#1554c0] dark:border-white/10 dark:bg-[#0d1422] dark:text-slate-200 dark:hover:border-[#28518a] sm:self-auto">
-                                View full catalogue <Icon name="arrow" className="h-3.5 w-3.5" />
-                            </Link>
+                <section id="courses" className="mx-auto max-w-[1240px] px-5 py-24 sm:px-8 sm:py-28">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                        <div>
+                            <p className="text-[9px] font-bold uppercase tracking-[.2em] text-[#1554c0] dark:text-[#78aaff]">Learn something useful</p>
+                            <h2 className="mt-1 text-3xl font-bold tracking-[-.04em] text-slate-950 dark:text-white">Explore our courses</h2>
+                            <p className="mt-2 max-w-xl text-[12px] leading-5 text-slate-500 dark:text-slate-400">Discover focused courses and choose the path that matches what you want to build next.</p>
                         </div>
+                    </div>
 
-                        {visibleCategories.length > 0 && (
-                            <div className="mt-7 flex gap-2 overflow-x-auto pb-1">
-                                {visibleCategories.map((category) => (
-                                    <a key={category.id} href={`/courses?category=${encodeURIComponent(category.slug)}`} className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[9px] font-bold text-slate-500 transition hover:border-[#b9d1f6] hover:text-[#1554c0] dark:border-white/10 dark:bg-[#0d1422] dark:text-slate-400 dark:hover:text-[#75aafb]">
-                                        {category.name} <span className="ml-1 text-slate-400">{category.course_count}</span>
-                                    </a>
-                                ))}
-                            </div>
-                        )}
+                    {categories.length > 0 && (
+                        <div className="mt-6 flex gap-2 overflow-x-auto pb-1">
+                            {categories.map(category => (
+                                <span key={category.slug} className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[9px] font-semibold text-slate-600 dark:border-slate-700 dark:bg-[#101827] dark:text-slate-300">
+                                    {category.name} <span className="text-slate-400">{category.count}</span>
+                                </span>
+                            ))}
+                        </div>
+                    )}
 
-                        {featuredCourses.length > 0 ? (
-                            <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                                {featuredCourses.map((course) => {
-                                    const image = assetUrl(course.thumbnail_path)
-                                    return (
-                                        <Link key={course.id} href={`/courses/${course.slug}`} className="group overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-[0_10px_30px_rgba(20,48,92,0.06)] transition duration-300 hover:-translate-y-1 hover:border-[#c6d9f6] hover:shadow-[0_18px_42px_rgba(20,48,92,0.11)] dark:border-white/10 dark:bg-[#0d1422] dark:hover:border-[#284b7b] dark:hover:shadow-[0_18px_42px_rgba(0,0,0,0.25)]">
-                                            <div className="relative h-40 overflow-hidden bg-[#eaf1fb] dark:bg-[#101b2c]">
-                                                {image ? (
-                                                    <img src={image} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.035]" />
-                                                ) : (
-                                                    <div className="flex h-full items-center justify-center bg-[radial-gradient(circle_at_30%_25%,rgba(21,84,192,0.22),transparent_35%),linear-gradient(135deg,#edf4ff,#dfeaf9)] text-[#1554c0] dark:bg-[radial-gradient(circle_at_30%_25%,rgba(117,170,251,0.18),transparent_35%),linear-gradient(135deg,#15253d,#0d1422)] dark:text-[#75aafb]">
-                                                        <Icon name={courseIcon(course)} className="h-9 w-9" />
-                                                    </div>
-                                                )}
-                                                <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
-                                                    <span className="rounded-full bg-white/90 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-600 shadow-sm backdrop-blur dark:bg-[#0b1423]/85 dark:text-slate-300">
-                                                        {course.category || 'Course'}
-                                                    </span>
-                                                    <span className="rounded-full bg-[#1554c0] px-2.5 py-1 text-[8px] font-bold text-white shadow-sm">
-                                                        {priceLabel(course)}
-                                                    </span>
-                                                </div>
+                    <div className="mt-7 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                        {courses.map(course => {
+                            const thumbnail = assetUrl(course.thumbnail_path)
+                            return (
+                                <article key={course.id} className="group overflow-hidden rounded-[18px] border border-slate-200/80 bg-white shadow-[0_7px_24px_rgba(23,32,51,.045)] transition duration-300 hover:-translate-y-1 hover:shadow-[0_16px_35px_rgba(23,32,51,.09)] dark:border-slate-800/80 dark:bg-[#101827] dark:hover:shadow-[0_18px_40px_rgba(0,0,0,.22)]">
+                                    <div className="relative h-36 overflow-hidden bg-gradient-to-br from-[#dfeaff] to-[#f4f0ff] dark:from-[#14243d] dark:to-[#19152f]">
+                                        {thumbnail ? <img src={thumbnail} alt="" className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" /> : <div className="flex h-full items-end p-4"><span className="rounded-full bg-white/70 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[.12em] text-[#1554c0] dark:bg-[#0c1728]/75 dark:text-[#8bb8ff]">Learn With Flevian</span></div>}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+                                        <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[8px] font-bold uppercase tracking-[.08em] text-slate-700 shadow-sm dark:bg-[#0c1728]/90 dark:text-slate-200">{course.category?.name || 'Course'}</span>
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <h3 className="text-[13px] font-bold leading-5 text-slate-950 dark:text-white">{course.title}</h3>
+                                            <span className="shrink-0 text-[10px] font-bold text-[#1554c0] dark:text-[#8bb8ff]">{formatPrice(course.price, course.currency, course.access_type)}</span>
+                                        </div>
+                                        <p className={`mt-1.5 text-[10px] leading-4 text-slate-500 dark:text-slate-400 ${expandedCourse === course.id ? '' : 'line-clamp-2'}`}>{course.short_description || 'Build practical knowledge through focused lessons and guided learning.'}</p>
+                                        <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-3 text-[8px] font-semibold uppercase tracking-[.08em] text-slate-400 dark:border-slate-800">
+                                            <span>{levelLabel(course.level)}</span><span>•</span><span>{course.modules_count} modules</span><span>•</span><span>{course.lessons_count} lessons</span>
+                                        </div>
+                                        <div className="mt-4 flex items-center justify-between gap-3">
+                                            <button type="button" onClick={() => setExpandedCourse(expandedCourse === course.id ? null : course.id)} className="text-[10px] font-bold text-[#1554c0] transition hover:text-[#0e429b] dark:text-[#8bb8ff]">
+                                                {expandedCourse === course.id ? 'Hide details' : 'Explore course'} <span className="ml-1">→</span>
+                                            </button>
+                                            <Link href="/register" className="rounded-lg bg-[#1554c0] px-3 py-2 text-[9px] font-bold text-white transition hover:bg-[#1249a7]">Start learning</Link>
+                                        </div>
+                                        {expandedCourse === course.id && (
+                                            <div className="mt-3 rounded-xl bg-[#f4f7fc] p-3 text-[9px] leading-4 text-slate-500 dark:bg-[#0b1424] dark:text-slate-400">
+                                                <p><span className="font-bold text-slate-700 dark:text-slate-200">Course format:</span> {course.modules_count} modules and {course.lessons_count} published lessons.</p>
+                                                <p className="mt-1"><span className="font-bold text-slate-700 dark:text-slate-200">Level:</span> {levelLabel(course.level)} · <span className="font-bold text-slate-700 dark:text-slate-200">Access:</span> {formatPrice(course.price, course.currency, course.access_type)}</p>
                                             </div>
-
-                                            <div className="p-5">
-                                                <div className="flex items-center gap-2 text-[9px] font-semibold text-slate-400">
-                                                    <span>{levelLabel(course.level)}</span>
-                                                    <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-                                                    <span>{course.module_count} modules</span>
-                                                    <span className="h-1 w-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-                                                    <span>{course.lesson_count} lessons</span>
-                                                </div>
-                                                <h3 className="mt-2.5 line-clamp-2 text-base font-bold leading-5 tracking-[-0.025em] transition group-hover:text-[#1554c0] dark:group-hover:text-[#75aafb]">{course.title}</h3>
-                                                <p className="mt-2 line-clamp-2 text-[11px] leading-5 text-slate-500 dark:text-slate-400">{course.short_description || course.description || 'A focused learning path designed to help you build practical skills.'}</p>
-                                                <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3.5 dark:border-white/10">
-                                                    <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-slate-400">Course overview</span>
-                                                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#1554c0] dark:text-[#75aafb]">Open <Icon name="arrow" className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" /></span>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    )
-                                })}
-                            </div>
-                        ) : (
-                            <div className="mt-8 rounded-[22px] border border-dashed border-slate-300 bg-white/70 px-6 py-14 text-center dark:border-white/10 dark:bg-[#0d1422]">
-                                <Icon name="book" className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
-                                <p className="mt-3 text-sm font-bold">Courses are being prepared.</p>
-                                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">The public catalogue will appear here as courses are published.</p>
-                            </div>
-                        )}
+                                        )}
+                                    </div>
+                                </article>
+                            )
+                        })}
                     </div>
                 </section>
 
-                {/* How it works */}
-                <section id="how-it-works" className="scroll-mt-24 bg-white py-20 dark:bg-[#0a101b] sm:py-24">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+                <section id="how-it-works" className="border-y border-slate-200/70 bg-white/70 dark:border-slate-800/70 dark:bg-[#0d1422]/70">
+                    <div className="mx-auto grid max-w-[1240px] gap-4 px-5 py-14 sm:grid-cols-3 sm:px-8 sm:py-16">
+                        {[
+                            ['01', 'Choose a course', 'Start with a focused course that matches the skill you want to develop.'],
+                            ['02', 'Learn & practice', 'Move through structured lessons and reinforce the ideas with practical work.'],
+                            ['03', 'Build your record', 'Complete learning, earn achievements and keep building evidence of progress.'],
+                        ].map(([number, title, description]) => (
+                            <div key={number} className="rounded-[18px] border border-slate-200/80 bg-white p-5 dark:border-slate-800 dark:bg-[#101827]">
+                                <span className="text-[10px] font-bold text-[#1554c0] dark:text-[#78aaff]">{number}</span>
+                                <h3 className="mt-4 text-[14px] font-bold text-slate-950 dark:text-white">{title}</h3>
+                                <p className="mt-1.5 text-[10px] leading-4 text-slate-500 dark:text-slate-400">{description}</p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section id="achievements" className="mx-auto max-w-[1240px] px-5 py-16 sm:px-8 sm:py-20">
+                    <div>
+                        <p className="text-[9px] font-bold uppercase tracking-[.2em] text-[#1554c0] dark:text-[#78aaff]">Progress that stays with you</p>
+                        <h2 className="mt-1 text-3xl font-bold tracking-[-.04em] text-slate-950 dark:text-white">Achievements worth earning</h2>
+                    </div>
+                    <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        {achievements.map(item => (
+                            <div key={item.id} className="rounded-[18px] border border-slate-200/80 bg-white p-4 dark:border-slate-800 dark:bg-[#101827]">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#172945] dark:text-[#8bb8ff]">★</div>
+                                <h3 className="mt-3 text-[12px] font-bold text-slate-950 dark:text-white">{item.name}</h3>
+                                <p className="mt-1 text-[9px] leading-4 text-slate-500 dark:text-slate-400">{item.description}</p>
+                                <p className="mt-3 text-[8px] font-bold uppercase tracking-[.1em] text-amber-600 dark:text-amber-300">+{item.points} points</p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="px-5 pb-24 pt-10 sm:px-8 sm:pb-28 sm:pt-14">
+                    <div className="relative mx-auto max-w-[1240px] overflow-hidden rounded-[28px] border border-slate-700/50 bg-[#081426] px-6 py-16 text-center shadow-[0_24px_70px_rgba(8,20,38,.18)] sm:px-10 sm:py-20">
+                        <video className="absolute inset-0 h-full w-full object-cover opacity-40 blur-[2px]" src={CTA_VIDEO} autoPlay muted loop playsInline preload="metadata" aria-hidden="true" />
+                        <div className="absolute inset-0 bg-[#071225]/72" />
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(67,121,255,.25),transparent_55%)]" />
+                        <div className="relative mx-auto max-w-2xl">
+                            <p className="text-[9px] font-bold uppercase tracking-[.22em] text-[#8bb8ff]">Start your next chapter</p>
+                            <h2 className="mt-4 text-3xl font-bold tracking-[-.045em] text-white sm:text-5xl">Ready to learn something that matters?</h2>
+                            <p className="mx-auto mt-4 max-w-xl text-[12px] leading-5 text-slate-300 sm:text-[14px]">Create your learner account and start building practical knowledge, completed work and achievements in one place.</p>
+                            <Link href="/register" className="mt-8 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[11px] font-bold text-[#1554c0] shadow-lg transition hover:-translate-y-0.5">Create your account <span>→</span></Link>
+                        </div>
+                    </div>
+                </section>
+
+                <footer className="border-t border-slate-200/70 bg-white dark:border-slate-800/70 dark:bg-[#0b1220]">
+                    <div className="mx-auto max-w-[1240px] px-5 py-12 sm:px-8 sm:py-14">
+                        <div className="grid gap-10 md:grid-cols-[1.5fr_.8fr_.8fr]">
                             <div>
-                                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#1554c0] dark:text-[#75aafb]"><span className="h-px w-7 bg-current" /> A simpler learning loop</div>
-                                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Learn. Practice. Achieve.</h2>
-                                <p className="mt-4 max-w-md text-sm leading-6 text-slate-500 dark:text-slate-400">The platform is built around a straightforward progression: understand the material, put it into practice, then build a record of what you have accomplished.</p>
+                                <a href="#top" className="flex items-center gap-3">
+                                    <img src="/favicon-192x192.png" alt="Learn With Flevian LMS" className="h-9 w-9 rounded-xl" />
+                                    <div><p className="text-[12px] font-bold text-slate-900 dark:text-white">Learn With Flevian</p><p className="text-[9px] text-slate-400">Learning Management System</p></div>
+                                </a>
+                                <p className="mt-4 max-w-md text-[10px] leading-5 text-slate-500 dark:text-slate-400">A practical online learning platform for building technology skills, completing focused courses and earning meaningful achievements.</p>
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-3">
-                                {[
-                                    { n: '01', title: 'Learn', text: 'Follow structured lessons inside focused courses.', icon: 'book' as const },
-                                    { n: '02', title: 'Practice', text: 'Use assignments and quizzes to test your understanding.', icon: 'assignment' as const },
-                                    { n: '03', title: 'Achieve', text: 'Collect achievements and evidence of progress.', icon: 'trophy' as const },
-                                ].map((step) => (
-                                    <div key={step.n} className="rounded-[22px] border border-slate-200/80 bg-[#f7f9fd] p-5 dark:border-white/10 dark:bg-[#101927]">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#1554c0] shadow-sm dark:bg-[#17263d] dark:text-[#75aafb]"><Icon name={step.icon} className="h-4 w-4" /></div>
-                                            <span className="text-[9px] font-bold text-slate-300 dark:text-slate-600">{step.n}</span>
-                                        </div>
-                                        <h3 className="mt-7 text-sm font-bold">{step.title}</h3>
-                                        <p className="mt-2 text-[10px] leading-5 text-slate-500 dark:text-slate-400">{step.text}</p>
-                                    </div>
-                                ))}
-                            </div>
+                            <div><p className="text-[9px] font-bold uppercase tracking-[.16em] text-slate-400">Explore</p><div className="mt-4 space-y-2 text-[10px] font-semibold text-slate-600 dark:text-slate-300"><a href="#courses" className="block hover:text-[#1554c0]">Courses</a><a href="#achievements" className="block hover:text-[#1554c0]">Achievements</a><a href="#how-it-works" className="block hover:text-[#1554c0]">How it works</a></div></div>
+                            <div><p className="text-[9px] font-bold uppercase tracking-[.16em] text-slate-400">Learner access</p><div className="mt-4 space-y-2 text-[10px] font-semibold text-slate-600 dark:text-slate-300"><Link href="/login" className="block hover:text-[#1554c0]">Sign in</Link><Link href="/register" className="block hover:text-[#1554c0]">Create account</Link></div></div>
                         </div>
-                    </div>
-                </section>
-
-                {/* Achievements */}
-                <section id="achievements" className="scroll-mt-24 border-t border-slate-200/70 bg-[#f4f7fc] py-20 dark:border-white/5 dark:bg-[#070c16] sm:py-24">
-                    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                        <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
-                            <div className="max-w-2xl">
-                                <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.18em] text-[#1554c0] dark:text-[#75aafb]"><span className="h-px w-7 bg-current" /> Recognition</div>
-                                <h2 className="mt-3 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">Progress should leave a trace.</h2>
-                                <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">Achievements give learners visible milestones as they complete meaningful work across the platform.</p>
-                            </div>
-                            <Link href="/achievements" className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[10px] font-bold text-slate-700 shadow-sm transition hover:text-[#1554c0] dark:border-white/10 dark:bg-[#0d1422] dark:text-slate-200 sm:self-auto">Explore achievements <Icon name="arrow" className="h-3.5 w-3.5" /></Link>
+                        <div className="mt-10 flex flex-col gap-2 border-t border-slate-200/70 pt-5 text-[9px] text-slate-400 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800/70">
+                            <span>© {new Date().getFullYear()} Learn With Flevian LMS. All rights reserved.</span><span>Learn with purpose. Build with confidence.</span>
                         </div>
-
-                        {visibleAchievements.length > 0 ? (
-                            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                                {visibleAchievements.map((achievement) => (
-                                    <div key={achievement.id} className="rounded-[20px] border border-slate-200/80 bg-white p-4 shadow-[0_8px_25px_rgba(20,48,92,0.04)] dark:border-white/10 dark:bg-[#0d1422]">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#edf4ff] text-[#1554c0] dark:bg-[#13294a] dark:text-[#75aafb]"><Icon name={achievementIcon(achievement.icon)} className="h-4 w-4" /></div>
-                                            <span className="text-[9px] font-bold text-slate-400">{achievement.points} pts</span>
-                                        </div>
-                                        <h3 className="mt-5 text-sm font-bold">{achievement.name}</h3>
-                                        <p className="mt-1.5 line-clamp-3 text-[10px] leading-5 text-slate-500 dark:text-slate-400">{achievement.description || 'A milestone earned through meaningful learning activity.'}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="mt-8 rounded-[22px] border border-dashed border-slate-300 bg-white/70 px-6 py-12 text-center dark:border-white/10 dark:bg-[#0d1422]"><p className="text-sm font-bold">Achievement milestones will appear here.</p></div>
-                        )}
-                    </div>
-                </section>
-
-                {/* Final CTA */}
-                <section className="relative overflow-hidden bg-[#0d2e67] py-20 text-white dark:bg-[#091a35] sm:py-24">
-                    <div className="absolute -left-20 top-0 h-64 w-64 rounded-full bg-[#4d92ed]/20 blur-3xl" />
-                    <div className="absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-[#1554c0]/30 blur-3xl" />
-                    <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
-                        <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-blue-200">Your learning starts here</p>
-                        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.04em] sm:text-5xl">Ready to make your next skill count?</h2>
-                        <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-blue-100/80">Join Learn With Flevian and turn focused learning into practical progress.</p>
-                        <Link href={authenticated ? '/courses' : '/register'} className="mt-7 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[11px] font-bold text-[#1554c0] shadow-lg transition hover:-translate-y-0.5 hover:bg-blue-50">
-                            {authenticated ? 'Browse courses' : 'Create your account'}
-                            <Icon name="arrow" className="h-4 w-4" />
-                        </Link>
-                    </div>
-                </section>
-
-                <footer className="border-t border-slate-200/70 bg-white py-8 dark:border-white/5 dark:bg-[#070c16]">
-                    <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 text-[9px] font-semibold text-slate-400 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-                        <div className="flex items-center gap-2"><img src="/favicon-192x192.png" alt="" className="h-6 w-6 rounded-lg" /><span>Learn With Flevian LMS</span></div>
-                        <span>{stats.published_courses > 0 ? `${formatNumber.format(stats.published_courses)} published learning paths` : 'Learning paths are being prepared'}</span>
                     </div>
                 </footer>
-            </div>
+            </main>
         </>
     )
 }
