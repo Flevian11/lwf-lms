@@ -11,6 +11,7 @@ use App\Http\Controllers\CourseEnrollmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminCourseController;
+use App\Http\Controllers\AdminModuleLessonController;
 use App\Http\Controllers\AdminProfileController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminSecurityController;
@@ -136,6 +137,39 @@ Route::middleware(['auth', AdminMiddleware::class])
         Route::delete('/courses/{course}', [AdminCourseController::class, 'destroy'])
             ->whereNumber('course')
             ->name('courses.destroy');
+
+        Route::get('/modules-lessons', [AdminModuleLessonController::class, 'index'])
+            ->name('modules-lessons.index');
+
+        Route::post('/modules-lessons/modules', [AdminModuleLessonController::class, 'storeModule'])
+            ->name('modules-lessons.modules.store');
+
+        Route::put('/modules-lessons/modules/{module}', [AdminModuleLessonController::class, 'updateModule'])
+            ->whereNumber('module')
+            ->name('modules-lessons.modules.update');
+
+        Route::delete('/modules-lessons/modules/{module}', [AdminModuleLessonController::class, 'destroyModule'])
+            ->whereNumber('module')
+            ->name('modules-lessons.modules.destroy');
+
+        Route::post('/modules-lessons/modules/{module}/move', [AdminModuleLessonController::class, 'moveModule'])
+            ->whereNumber('module')
+            ->name('modules-lessons.modules.move');
+
+        Route::post('/modules-lessons/lessons', [AdminModuleLessonController::class, 'storeLesson'])
+            ->name('modules-lessons.lessons.store');
+
+        Route::put('/modules-lessons/lessons/{lesson}', [AdminModuleLessonController::class, 'updateLesson'])
+            ->whereNumber('lesson')
+            ->name('modules-lessons.lessons.update');
+
+        Route::delete('/modules-lessons/lessons/{lesson}', [AdminModuleLessonController::class, 'destroyLesson'])
+            ->whereNumber('lesson')
+            ->name('modules-lessons.lessons.destroy');
+
+        Route::post('/modules-lessons/lessons/{lesson}/move', [AdminModuleLessonController::class, 'moveLesson'])
+            ->whereNumber('lesson')
+            ->name('modules-lessons.lessons.move');
 
         Route::get('/profile', [
             AdminProfileController::class,
