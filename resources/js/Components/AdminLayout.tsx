@@ -29,14 +29,14 @@ const sections = [
             { label: 'Modules & Lessons', href: '/admin/modules-lessons', icon: 'book' as const, enabled: true },
             { label: 'Assignments', href: '/admin/assignments', icon: 'assignment' as const, enabled: true },
             { label: 'Quizzes', href: '/admin/quizzes', icon: 'quiz' as const, enabled: true },
-            { label: 'Achievements', icon: 'trophy' as const, enabled: false },
+            { label: 'Achievements', href: '/admin/achievements', icon: 'trophy' as const, enabled: true },
         ],
     },
     {
         label: 'People',
         items: [
-            { label: 'Students', icon: 'user' as const, enabled: false },
-            { label: 'Enrollments', icon: 'assignment' as const, enabled: false },
+            { label: 'Students', href: '/admin/students', icon: 'user' as const, enabled: true },
+            { label: 'Enrollments', href: '/admin/enrollments', icon: 'assignment' as const, enabled: true },
         ],
     },
     {

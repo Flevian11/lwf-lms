@@ -1,0 +1,26 @@
+Add these controller imports at the top of routes/web.php if they are not already present:
+
+use App\Http\Controllers\AdminAchievementController;
+use App\Http\Controllers\AdminEnrollmentController;
+use App\Http\Controllers\AdminStudentController;
+
+Then add this block inside the existing authenticated + AdminMiddleware + prefix('admin') route group. Do not replace the whole routes/web.php.
+
+        Route::get('/achievements', [AdminAchievementController::class, 'index'])->name('achievements.index');
+        Route::post('/achievements', [AdminAchievementController::class, 'store'])->name('achievements.store');
+        Route::put('/achievements/{achievement}', [AdminAchievementController::class, 'update'])->whereNumber('achievement')->name('achievements.update');
+        Route::delete('/achievements/{achievement}', [AdminAchievementController::class, 'destroy'])->whereNumber('achievement')->name('achievements.destroy');
+        Route::post('/achievements/{achievement}/award', [AdminAchievementController::class, 'award'])->whereNumber('achievement')->name('achievements.award');
+
+        Route::get('/students', [AdminStudentController::class, 'index'])->name('students.index');
+        Route::post('/students', [AdminStudentController::class, 'store'])->name('students.store');
+        Route::put('/students/{student}', [AdminStudentController::class, 'update'])->whereNumber('student')->name('students.update');
+        Route::post('/students/{student}/toggle-status', [AdminStudentController::class, 'toggleStatus'])->whereNumber('student')->name('students.toggle-status');
+        Route::delete('/students/{student}', [AdminStudentController::class, 'destroy'])->whereNumber('student')->name('students.destroy');
+
+        Route::get('/enrollments', [AdminEnrollmentController::class, 'index'])->name('enrollments.index');
+        Route::post('/enrollments/{enrollment}/approve', [AdminEnrollmentController::class, 'approve'])->whereNumber('enrollment')->name('enrollments.approve');
+        Route::post('/enrollments/{enrollment}/grant-access', [AdminEnrollmentController::class, 'grantAccess'])->whereNumber('enrollment')->name('enrollments.grant-access');
+        Route::post('/enrollments/{enrollment}/revoke-access', [AdminEnrollmentController::class, 'revokeAccess'])->whereNumber('enrollment')->name('enrollments.revoke-access');
+        Route::post('/enrollments/{enrollment}/suspend', [AdminEnrollmentController::class, 'suspend'])->whereNumber('enrollment')->name('enrollments.suspend');
+        Route::post('/enrollments/{enrollment}/cancel', [AdminEnrollmentController::class, 'cancel'])->whereNumber('enrollment')->name('enrollments.cancel');
