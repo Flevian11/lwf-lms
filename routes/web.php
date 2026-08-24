@@ -30,6 +30,7 @@ use App\Http\Controllers\PublicHomeController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\StudentCoursesController;
+use App\Http\Controllers\StudentPaymentController;
 use App\Http\Controllers\UserSessionController;
 use App\Services\StudentDashboardService;
 use App\Support\AuthenticatedUserRedirect;
@@ -142,6 +143,9 @@ Route::middleware(['auth'])->get('/auth/redirect-target', function (Request $req
 | Authenticated Application
 |--------------------------------------------------------------------------
 */
+
+Route::post('/payments/mpesa/callback', [StudentPaymentController::class, 'callback'])
+    ->name('payments.mpesa.callback');
 
 Route::middleware(['auth', AdminMiddleware::class])
     ->prefix('admin')
@@ -302,6 +306,22 @@ Route::middleware(['auth'])->group(function (): void {
 
     Route::get('/dashboard', DashboardController::class)
         ->name('dashboard');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Student Payments
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/payments', [StudentPaymentController::class, 'index'])
+        ->name('payments.index');
+
+    Route::post('/payments/stk-push', [StudentPaymentController::class, 'initiate'])
+        ->name('payments.stk-push');
+
+    Route::get('/payments/{payment}/status', [StudentPaymentController::class, 'status'])
+        ->whereNumber('payment')
+        ->name('payments.status');
 
     /*
     |--------------------------------------------------------------------------

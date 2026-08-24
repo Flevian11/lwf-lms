@@ -48,6 +48,7 @@ interface StudentLayoutProps {
 const learningItems = [
     { label: 'Dashboard', href: '/dashboard', icon: 'grid' as const },
     { label: 'My Courses', href: '/courses', icon: 'book' as const },
+    { label: 'Payments', href: '/payments', icon: 'target' as const },
     { label: 'Assignments', href: '/assignments', icon: 'assignment' as const },
     { label: 'Quizzes', href: '/quizzes', icon: 'quiz' as const },
     { label: 'Achievements', href: '/achievements', icon: 'trophy' as const },
