@@ -419,23 +419,300 @@ class StudentPaymentController extends Controller
         }
     }
 
-    public function status(Request $request, Payment $payment): JsonResponse
-    {
-        abort_unless(
-            $payment->user_id === $request->user()->id,
-            403
-        );
+   public function status(Request $request, Payment $payment): JsonResponse
+{
+    abort_unless(
+        $payment->user_id === $request->user()->id,
+        403
+    );
 
+    $payment->load([
+        'course:id,title,slug',
+        'transactions',
+    ]);
+
+    /*
+     * If the callback has already completed/failed the payment,
+     * return the authoritative database state immediately.
+     */
+    if (
+        in_array(
+            $payment->status,
+            [
+                'successful',
+                'failed',
+                'cancelled',
+                'refunded',
+                'partially_refunded',
+            ],
+            true
+        )
+    ) {
         return response()->json([
             'success' => true,
-            'payment' => $this->paymentPayload(
-                $payment->load([
-                    'course:id,title,slug',
-                    'transactions',
-                ])
-            ),
+            'payment' => $this->paymentPayload($payment),
         ]);
     }
+
+    /*
+     * Find the latest transaction belonging to this payment.
+     */
+    $transaction = $payment->transactions
+        ->sortByDesc('id')
+        ->first();
+
+    /*
+     * There is nothing to query until Safaricom has given us a
+     * CheckoutRequestID.
+     */
+    $checkoutRequestId = $transaction?->checkout_request_id;
+
+    if (
+        ! $transaction
+        || ! is_string($checkoutRequestId)
+        || trim($checkoutRequestId) === ''
+    ) {
+        return response()->json([
+            'success' => true,
+            'payment' => $this->paymentPayload($payment),
+        ]);
+    }
+
+    /*
+     * Only reconcile payments that are still waiting for Safaricom.
+     */
+    if (
+        ! in_array(
+            $payment->status,
+            ['pending', 'processing'],
+            true
+        )
+    ) {
+        return response()->json([
+            'success' => true,
+            'payment' => $this->paymentPayload($payment),
+        ]);
+    }
+
+    try {
+        $queryResponse = $this->mpesa->queryStkPush(
+            $checkoutRequestId
+        );
+
+        $resultCode = isset($queryResponse['ResultCode'])
+            ? (string) $queryResponse['ResultCode']
+            : null;
+
+        $resultDescription = (string) (
+            $queryResponse['ResultDesc']
+            ?? $queryResponse['ResponseDescription']
+            ?? 'M-Pesa payment is still being processed.'
+        );
+
+        /*
+         * Preserve the original STK Push response and append the
+         * Safaricom query response for a complete audit trail.
+         */
+        $existingPayload = is_array($transaction->response_payload)
+            ? $transaction->response_payload
+            : [];
+
+        $transaction->update([
+            'response_payload' => array_merge(
+                $existingPayload,
+                [
+                    'stk_query' => [
+                        'queried_at' => now()->toISOString(),
+                        'response' => $queryResponse,
+                    ],
+                ]
+            ),
+            'result_code' => $resultCode,
+            'result_description' => $resultDescription,
+        ]);
+
+        Log::info('LWF M-Pesa payment status reconciled.', [
+            'payment_id' => $payment->id,
+            'transaction_id' => $transaction->id,
+            'checkout_request_id' => $checkoutRequestId,
+            'result_code' => $resultCode,
+            'result_description' => $resultDescription,
+        ]);
+
+        /*
+         * ResultCode 0 means Safaricom confirms that the STK
+         * transaction was successfully completed.
+         *
+         * STK Query does not provide the CallbackMetadata receipt
+         * in the same form as the asynchronous callback, so we do
+         * NOT invent a receipt number here.
+         *
+         * The callback can still arrive afterwards and populate
+         * the actual MpesaReceiptNumber.
+         */
+        if ($resultCode === '0') {
+            DB::transaction(function () use (
+                $payment,
+                $transaction,
+                $resultDescription
+            ): void {
+                /*
+                 * Re-read the records inside the transaction so a
+                 * callback that arrived concurrently wins safely.
+                 */
+                $lockedPayment = Payment::query()
+                    ->lockForUpdate()
+                    ->find($payment->id);
+
+                $lockedTransaction = PaymentTransaction::query()
+                    ->lockForUpdate()
+                    ->find($transaction->id);
+
+                if (! $lockedPayment || ! $lockedTransaction) {
+                    return;
+                }
+
+                /*
+                 * If the callback already completed it, do nothing.
+                 */
+                if ($lockedPayment->status === 'successful') {
+                    return;
+                }
+
+                $lockedPayment->update([
+                    'status' => 'successful',
+                    'completed_at' => now(),
+                ]);
+
+                $lockedTransaction->update([
+                    'status' => 'successful',
+                    'result_code' => '0',
+                    'result_description' => $resultDescription,
+                    'processed_at' => now(),
+                ]);
+
+                /*
+                 * Preserve the original LMS rule:
+                 * successful payment updates an EXISTING active
+                 * enrollment; it never creates one.
+                 */
+                $enrollment = CourseEnrollment::query()
+                    ->where('user_id', $lockedPayment->user_id)
+                    ->where('course_id', $lockedPayment->course_id)
+                    ->where('status', 'active')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($enrollment) {
+                    $enrollment->update([
+                        'source' => 'payment',
+                        'payment_id' => $lockedPayment->id,
+                        'status' => 'active',
+                        'access_granted_at' =>
+                            $enrollment->access_granted_at ?: now(),
+                    ]);
+                }
+            });
+
+            /*
+             * Refresh so the response immediately reflects the
+             * successful reconciliation.
+             */
+            $payment->refresh()->load([
+                'course:id,title,slug',
+                'transactions',
+            ]);
+        }
+
+        /*
+         * These are definitive customer/payment failures.
+         *
+         * We deliberately do NOT turn an unknown/malformed query
+         * response into a failure. The asynchronous callback may
+         * still arrive.
+         */
+        if (
+            in_array(
+                $resultCode,
+                [
+                    '1032', // Request cancelled by user.
+                    '1037', // DS timeout / callback timeout.
+                    '2001', // Wrong PIN / rejected by customer.
+                ],
+                true
+            )
+        ) {
+            DB::transaction(function () use (
+                $payment,
+                $transaction,
+                $resultCode,
+                $resultDescription
+            ): void {
+                $lockedPayment = Payment::query()
+                    ->lockForUpdate()
+                    ->find($payment->id);
+
+                $lockedTransaction = PaymentTransaction::query()
+                    ->lockForUpdate()
+                    ->find($transaction->id);
+
+                if (! $lockedPayment || ! $lockedTransaction) {
+                    return;
+                }
+
+                /*
+                 * Never downgrade a payment already confirmed by
+                 * the callback.
+                 */
+                if ($lockedPayment->status === 'successful') {
+                    return;
+                }
+
+                $lockedPayment->update([
+                    'status' => 'failed',
+                    'failed_at' => now(),
+                ]);
+
+                $lockedTransaction->update([
+                    'status' => 'failed',
+                    'result_code' => $resultCode,
+                    'result_description' => $resultDescription,
+                    'processed_at' => now(),
+                ]);
+            });
+
+            $payment->refresh()->load([
+                'course:id,title,slug',
+                'transactions',
+            ]);
+        }
+    } catch (Throwable $exception) {
+        /*
+         * Query failure is NOT payment failure.
+         *
+         * Safaricom's callback can still arrive, so leave the
+         * payment in its current state.
+         */
+        report($exception);
+
+        Log::warning('LWF M-Pesa STK Query failed.', [
+            'payment_id' => $payment->id,
+            'transaction_id' => $transaction->id,
+            'checkout_request_id' => $checkoutRequestId,
+            'error' => $exception->getMessage(),
+        ]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'payment' => $this->paymentPayload(
+            $payment->fresh()->load([
+                'course:id,title,slug',
+                'transactions',
+            ])
+        ),
+    ]);
+}
 
     public function callback(Request $request): JsonResponse
     {
