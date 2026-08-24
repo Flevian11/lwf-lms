@@ -46,6 +46,14 @@ use Inertia\Inertia;
 
 Route::get('/', PublicHomeController::class)->name('home');
 
+Route::get('/privacy', function () {
+    return Inertia::render('Privacy');
+})->name('privacy');
+
+Route::get('/terms', function () {
+    return Inertia::render('Terms');
+})->name('terms');
+
 /*
 |--------------------------------------------------------------------------
 | Social Authentication
