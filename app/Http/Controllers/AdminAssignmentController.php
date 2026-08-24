@@ -35,7 +35,7 @@ class AdminAssignmentController extends Controller
         $submissions=$selectedAssignment ? AssignmentSubmission::with(['user:id,name,email,avatar_path'])->where('assignment_id',$selectedAssignment->id)->latest('submitted_at')->paginate(10,['*'],'submission_page')->withQueryString()->through(fn(AssignmentSubmission $s)=>[
             'id'=>$s->id,'user'=>['id'=>$s->user->id,'name'=>$s->user->name,'email'=>$s->user->email,'avatar_path'=>$s->user->avatar_path], 'attempt_number'=>$s->attempt_number,'status'=>$s->status,'score'=>$s->score,'max_points'=>$selectedAssignment->max_points,'feedback'=>$s->feedback,'submitted_at'=>$s->submitted_at?->toISOString(),'graded_at'=>$s->graded_at?->toISOString(),'original_filename'=>$s->original_filename,'file_size'=>$s->file_size,'has_file'=>(bool)$s->file_path,
         ]) : null;
-        return Inertia::render('Admin/Assignments',['admin'=>$this->adminPayload($request),'assignments'=>$assignments,'courses'=>Course::orderBy('title')->get(['id','title','slug']),'students'=>$allocationCourseId ? $this->eligibleStudents($allocationCourseId)->map(fn(User $u)=>$this->studentPayload($u))->values()->all() : [],'selectedAssignment'=>$selectedAssignment ? $this->assignmentDetail($selectedAssignment) : null,'submissions'=>$submissions,'filters'=>['search'=>$search,'status'=>$status,'course_id'=>$courseId,'assignment_id'=>$selected]]);
+        return Inertia::render('Admin/Assignments',['admin'=>$this->adminPayload($request),'assignments'=>$assignments,'courses'=>Course::orderBy('title')->get(['id','title','slug']),'students'=>$allocationCourseId ? $this->eligibleStudents($allocationCourseId, $selectedAssignment?->id)->map(fn(User $u)=>$this->studentPayload($u))->values()->all() : [],'selectedAssignment'=>$selectedAssignment ? $this->assignmentDetail($selectedAssignment) : null,'submissions'=>$submissions,'filters'=>['search'=>$search,'status'=>$status,'course_id'=>$courseId,'assignment_id'=>$selected]]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -52,7 +52,7 @@ class AdminAssignmentController extends Controller
     public function allocate(Request $request, Assignment $assignment): RedirectResponse
     {
         $data=$request->validate(['user_ids'=>['required','array','min:1'],'user_ids.*'=>['integer','distinct','exists:users,id']]);
-        $eligible=$this->eligibleStudents($assignment->course_id)->whereIn('id',$data['user_ids'])->keyBy('id'); $created=[];
+        $eligible=$this->eligibleStudents($assignment->course_id, $assignment->id)->whereIn('id',$data['user_ids'])->keyBy('id'); $created=[];
         DB::transaction(function() use($assignment,$eligible,$request,&$created){ foreach($eligible as $student){ $allocation=AssignmentAllocation::firstOrCreate(['assignment_id'=>$assignment->id,'user_id'=>$student->id],['assigned_by'=>$request->user()->id,'assigned_at'=>now()]); if($allocation->wasRecentlyCreated) $created[]=$student; }});
         foreach($created as $student){ $this->audit('assignment_allocated',$request,$assignment,['student_id'=>$student->id]); try { Notification::send($student->fresh(),new AssignmentAllocatedNotification($assignment->load('course'))); $this->audit('assignment_allocation_email_sent',$request,$assignment,['student_id'=>$student->id,'recipient'=>$student->email]); } catch(Throwable $e){ $this->audit('assignment_allocation_email_failed',$request,$assignment,['student_id'=>$student->id,'recipient'=>$student->email,'error'=>$e->getMessage()]); }}
         return back()->with('success',count($created).' student(s) allocated successfully.');
@@ -72,7 +72,29 @@ class AdminAssignmentController extends Controller
     public function download(Request $request, AssignmentSubmission $submission)
     { $submission->load('assignment'); abort_unless($submission->file_path && Storage::disk('local')->exists($submission->file_path),404); $this->audit('assignment_submission_downloaded',$request,$submission->assignment,['submission_id'=>$submission->id,'student_id'=>$submission->user_id]); return Storage::disk('local')->download($submission->file_path,$submission->original_filename ?: basename($submission->file_path)); }
 
-    private function eligibleStudents(int $courseId){ return User::query()->role('Student')->whereHas('courseEnrollments',fn($q)=>$q->where('course_id',$courseId)->whereIn('status',['active','completed'])->whereNotNull('access_granted_at'))->orderBy('name')->get(['id','name','email','avatar_path']); }
+    private function eligibleStudents(int $courseId, ?int $assignmentId = null){
+        return User::query()
+            ->whereDoesntHave('roles', fn($q) => $q->where('name','Admin')->where('guard_name','web'))
+            ->whereHas('courseEnrollments', fn($q) => $q->where('course_id',$courseId)->whereIn('status',['active','completed'])->whereNotNull('access_granted_at'))
+            ->when($assignmentId, function($q) use ($assignmentId) {
+                // Do not rely on optional User model relationships here. Eligibility is enforced
+                // directly against the allocation/submission tables so this remains valid even
+                // when those inverse relationships are not declared on User.
+                $q->whereNotExists(function($sub) use ($assignmentId) {
+                    $sub->selectRaw('1')
+                        ->from('assignment_allocations')
+                        ->whereColumn('assignment_allocations.user_id', 'users.id')
+                        ->where('assignment_allocations.assignment_id', $assignmentId);
+                })->whereNotExists(function($sub) use ($assignmentId) {
+                    $sub->selectRaw('1')
+                        ->from('assignment_submissions')
+                        ->whereColumn('assignment_submissions.user_id', 'users.id')
+                        ->where('assignment_submissions.assignment_id', $assignmentId);
+                });
+            })
+            ->orderBy('name')
+            ->get(['id','name','email','avatar_path']);
+    }
     private function validateAssignment(Request $request,?Assignment $assignment=null):array { return $request->validate(['course_id'=>['required','integer','exists:courses,id'],'module_id'=>['nullable','integer','exists:course_modules,id'],'lesson_id'=>['nullable','integer','exists:lessons,id'],'title'=>['required','string','max:200'],'slug'=>['nullable','string','max:220','regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',Rule::unique('assignments','slug')->ignore($assignment?->id)],'instructions'=>['required','string'],'max_points'=>['required','integer','min:1','max:10000'],'available_from'=>['nullable','date'],'due_at'=>['nullable','date','after_or_equal:available_from'],'submission_type'=>['required',Rule::in(['text','file','text_and_file'])],'max_file_size_mb'=>['nullable','integer','min:1','max:100'],'allowed_file_types'=>['nullable','array'],'status'=>['required',Rule::in(['draft','published','closed'])]]); }
     private function uniqueSlug(string $base,?int $ignore=null, ?int $courseId=null):string { $slug=\Illuminate\Support\Str::slug($base); $candidate=$slug; $i=2; while(Assignment::where('course_id',$courseId)->where('slug',$candidate)->when($ignore,fn($q)=>$q->where('id', '<>', $ignore))->exists()){ $candidate=$slug.'-'.$i++; } return $candidate; }
     private function assignmentPayload(Assignment $a):array { return ['id'=>$a->id,'title'=>$a->title,'slug'=>$a->slug,'course'=>$a->course?->title,'course_id'=>$a->course_id,'instructions'=>$a->instructions,'max_points'=>$a->max_points,'available_from'=>$a->available_from?->toISOString(),'due_at'=>$a->due_at?->toISOString(),'submission_type'=>$a->submission_type,'max_file_size_mb'=>$a->max_file_size_mb,'allowed_file_types'=>$a->allowed_file_types??[],'status'=>$a->status,'allocations_count'=>$a->allocations_count,'submissions_count'=>$a->submissions_count,'updated_at'=>$a->updated_at?->toISOString()]; }

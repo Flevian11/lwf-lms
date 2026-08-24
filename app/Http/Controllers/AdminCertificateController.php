@@ -23,7 +23,7 @@ class AdminCertificateController extends Controller
         $search = trim((string) $request->input('search', ''));
 
         $certificates = CourseEnrollment::query()
-            ->with(['user:id,name,email,avatar_path', 'course:id,title'])
+            ->with(['user:id,name,email,avatar_path', 'course:id,title,thumbnail_path'])
             ->where('status', 'completed')
             ->whereNotNull('completed_at')
             ->when($search !== '', function ($query) use ($search) {

@@ -1,23 +1,10 @@
-# Reports v5 — analytics, theme, export and performance upgrade
+# Admin assessment allocation eligibility — v3
 
-This patch updates only the Reports feature files.
+- Assignment allocation candidates now include only learners with active/completed course access who have neither an existing allocation nor a submission for the selected assignment.
+- Quiz allocation candidates now include only learners with active/completed course access who have neither an existing allocation nor a quiz attempt for the selected quiz.
+- The same eligibility filter is enforced by the POST allocation endpoints, so stale UI selections cannot reallocate learners who have already been allocated or have already submitted/attempted.
+- Existing allocations/attempts remain visible in the selected assessment detail; only the new-allocation candidate list is filtered.
 
-## Changes
 
-- Fixed the admin Reports PDF export Blade template by removing fragile Blade loop directives from the report body and using PHP block loops.
-- Fixed the PDF response filename header.
-- Added achievement leaderboard data using real `user_achievements` records and awarded points.
-- Added top assignment performance using graded submission scores normalized against each assignment's `max_points`.
-- Added top quiz performance using graded quiz-attempt percentages and pass counts.
-- Added course thumbnail paths to the course breakdown and renders the thumbnail when available.
-- Added a live system-coverage section for catalogue, access, engagement and finance indicators.
-- Added working navigation to `/admin/courses` and the existing admin settings/audit activity area.
-- Fixed the Platform Performance donut label so `OVERALL COMPLETION` cannot overlap the percentage.
-- Added full light/dark theme variants while preserving the reference dark-mode visual hierarchy.
-- Preserved real database-driven activity trend, traffic, enrollment and completion metrics.
-
-## Validation
-
-- PHP syntax check passed for `AdminReportsController.php`.
-- PHP syntax check passed for `resources/views/admin/reports/pdf.blade.php`.
-- TypeScript/JSX transpilation check passed for `Reports.tsx`.
+## v4 — allocation eligibility relation fix
+Replaced inverse User relationship checks with direct `whereNotExists` subqueries against assignment/quiz allocation and submission/attempt tables. This fixes the `Call to undefined method User::assignmentAllocations()` and `User::quizAllocations()` errors while preserving the eligibility rules.
