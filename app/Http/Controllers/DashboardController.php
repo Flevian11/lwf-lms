@@ -25,15 +25,14 @@ class DashboardController extends Controller
         abort_unless($user !== null, 403);
 
         /*
-         * For now we are building the student dashboard first.
-         *
-         * Admin dashboard routing/service will be introduced
-         * separately once the student experience is complete.
+         * /dashboard is the student workspace.
+         * Admin passkey authentication redirects directly to /admin,
+         * so the shared student dashboard does not need to redirect admins.
          */
         if ($user->hasRole('Admin')) {
             abort(
                 403,
-                'The administrator dashboard is not available yet.'
+                'The administrator dashboard is not available at this URL.'
             );
         }
 

@@ -32,6 +32,7 @@ use App\Http\Controllers\SecurityController;
 use App\Http\Controllers\StudentCoursesController;
 use App\Http\Controllers\UserSessionController;
 use App\Services\StudentDashboardService;
+use App\Support\AuthenticatedUserRedirect;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -117,6 +118,24 @@ Route::middleware(['guest'])->group(function (): void {
         'resend',
     ])->name('two-factor.resend');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Authenticated redirect resolution
+|--------------------------------------------------------------------------
+*/
+
+Route::middleware(['auth'])->get('/auth/redirect-target', function (Request $request) {
+    $user = $request->user();
+    $target = AuthenticatedUserRedirect::targetUrl($user);
+
+    return response()->json([
+        'authenticated' => true,
+        'redirect' => $target,
+    ], 200, [
+        'Cache-Control' => 'no-store, no-cache, must-revalidate',
+    ]);
+})->name('auth.redirect-target');
 
 /*
 |--------------------------------------------------------------------------

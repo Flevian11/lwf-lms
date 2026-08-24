@@ -143,10 +143,10 @@ export default function Login({
     status,
 }: LoginProps) {
     const [showPassword, setShowPassword] = useState(false);
-    const [passkeyProcessing, setPasskeyProcessing] =
-        useState(false);
-    const [passkeyError, setPasskeyError] =
-        useState<string | null>(null);
+    const [passkeyProcessing, setPasskeyProcessing] = useState(false);
+    const [passkeyError, setPasskeyError] = useState<string | null>(null);
+    const [passkeySuccess, setPasskeySuccess] = useState(false);
+    const [passkeyStatus, setPasskeyStatus] = useState('');
 
     const form = useForm({
         email: '',
@@ -156,12 +156,53 @@ export default function Login({
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
-
         setPasskeyError(null);
-
         form.post('/login', {
             onFinish: () => form.reset('password'),
         });
+    };
+
+    const finishPasskeyLogin = async (result?: unknown) => {
+        setPasskeyStatus('Verifying your account…');
+
+        let payload = result && typeof result === 'object'
+            ? (result as { authenticated?: boolean; redirect?: string })
+            : null;
+
+        // Passkeys.verify() returns the JSON response from Laravel. Use it
+        // directly; only fall back to the resolver for older cached responses.
+        if (!payload?.redirect) {
+            const response = await fetch('/auth/redirect-target', {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'no-store',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error(
+                    'Your passkey was verified, but we could not determine your workspace. Please try again.',
+                );
+            }
+
+            payload = await response.json();
+        }
+
+        if (!payload?.authenticated || !payload.redirect) {
+            throw new Error(
+                'Your passkey was accepted, but no secure destination was returned. Please try again.',
+            );
+        }
+
+        setPasskeySuccess(true);
+        setPasskeyStatus('Passkey verified. Opening your workspace…');
+
+        window.setTimeout(() => {
+            window.location.replace(payload!.redirect!);
+        }, 550);
     };
 
     useEffect(() => {
@@ -177,10 +218,23 @@ export default function Login({
 
         const enablePasskeyAutofill = async () => {
             try {
-                await Passkeys.autofill();
+                const result = await Passkeys.autofill();
+
+                // Autofill can complete authentication without the button.
+                // The previous code discarded this successful response.
+                if (!cancelled && result) {
+                    setPasskeyProcessing(true);
+                    setPasskeyError(null);
+                    setPasskeyStatus('Verifying your account…');
+                    await finishPasskeyLogin(result);
+                }
             } catch (error) {
                 if (!cancelled) {
                     console.debug('Passkey autofill unavailable.', error);
+                }
+            } finally {
+                if (!cancelled) {
+                    setPasskeyProcessing(false);
                 }
             }
         };
@@ -196,58 +250,35 @@ export default function Login({
     const loginWithPasskey = async () => {
         setPasskeyProcessing(true);
         setPasskeyError(null);
+        setPasskeySuccess(false);
+        setPasskeyStatus('Starting secure passkey verification…');
 
         try {
-            if (
-                !window.PublicKeyCredential ||
-                !navigator.credentials
-            ) {
+            if (!window.PublicKeyCredential || !navigator.credentials) {
                 throw new Error(
-                    'Passkeys are not supported by this browser.',
+                    'Passkeys are not supported by this browser. Please use your password instead.',
                 );
             }
 
-            /*
-             * Laravel's official passkey client handles:
-             *
-             * 1. Fetching /passkeys/login/options.
-             * 2. Calling the browser's WebAuthn credential picker.
-             * 3. Sending the signed assertion to /passkeys/login.
-             * 4. Establishing the authenticated Laravel session.
-             *
-             * This is a completely independent authentication path.
-             *
-             * Password login:
-             *     email + password -> email OTP -> dashboard
-             *
-             * Passkey login:
-             *     passkey -> dashboard
-             *
-             * A successful passkey login therefore does not enter
-             * the email 2FA challenge.
-             */
+            setPasskeyStatus(
+                'Waiting for your fingerprint, face, PIN, or security key…',
+            );
+
+            // CRITICAL: consume the actual response. The previous implementation
+            // awaited this call and threw away the successful login response.
             const result = await Passkeys.verify({
                 remember: () => form.data.remember,
             });
 
-            if (
-                result &&
-                typeof result === 'object' &&
-                'redirect' in result &&
-                typeof result.redirect === 'string'
-            ) {
-                window.location.assign(result.redirect);
-                return;
-            }
-
-            window.location.assign('/dashboard');
+            await finishPasskeyLogin(result);
         } catch (error) {
-            console.error(error);
-
+            console.error('Passkey login failed:', error);
+            setPasskeySuccess(false);
+            setPasskeyStatus('');
             setPasskeyError(
                 error instanceof Error
                     ? error.message
-                    : 'Unable to sign in with your passkey.',
+                    : 'Passkey authentication failed. Please try again or use your password.',
             );
         } finally {
             setPasskeyProcessing(false);
@@ -301,6 +332,24 @@ export default function Login({
                         {passkeyError && (
                             <div className="mb-5 rounded-[6px] border border-[#d13438] bg-[#fff5f5] px-3 py-2.5 text-sm text-[#b42318] dark:border-[#6f3030] dark:bg-[#2a1517] dark:text-[#ff8b8b]">
                                 {passkeyError}
+                            </div>
+                        )}
+
+                        {passkeyProcessing && passkeyStatus && (
+                            <div
+                                role="status"
+                                aria-live="polite"
+                                className="mb-5 flex items-start gap-3 rounded-[8px] border border-[#b9d3ff] bg-[#f3f7ff] px-4 py-3 text-sm text-[#174ea6] dark:border-[#315a9b] dark:bg-[#10213d] dark:text-[#9fc3ff]"
+                            >
+                                <span className="mt-0.5 h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                <span>
+                                    <span className="block font-semibold">
+                                        {passkeySuccess ? 'Signed in successfully' : 'Securing your sign-in'}
+                                    </span>
+                                    <span className="mt-0.5 block opacity-90">
+                                        {passkeyStatus}
+                                    </span>
+                                </span>
                             </div>
                         )}
 
@@ -486,7 +535,9 @@ export default function Login({
                             <PasskeyIcon />
 
                             {passkeyProcessing
-                                ? 'Authenticating...'
+                                ? passkeySuccess
+                                    ? 'Opening workspace…'
+                                    : 'Verifying passkey…'
                                 : 'Sign in with passkey'}
                         </button>
 
