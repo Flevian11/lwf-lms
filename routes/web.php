@@ -20,6 +20,8 @@ use App\Http\Controllers\AdminStudentController;
 use App\Http\Controllers\AdminEnrollmentController;
 use App\Http\Controllers\AdminAssignmentController;
 use App\Http\Controllers\AdminQuizController;
+use App\Http\Controllers\AdminReportsController;
+use App\Http\Controllers\AdminCertificateController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Controllers\EmailTwoFactorController;
 use App\Http\Controllers\OnboardingController;
@@ -251,6 +253,11 @@ Route::middleware(['auth', AdminMiddleware::class])
             AdminSettingsController::class,
             'clearAuditLogs',
         ])->name('settings.audit.clear');
+
+        Route::get('/reports', [AdminReportsController::class, 'index'])->name('reports.index');
+        Route::get('/reports/export', [AdminReportsController::class, 'exportPdf'])->name('reports.export');
+        Route::get('/certificates', [AdminCertificateController::class, 'index'])->name('certificates.index');
+        Route::get('/certificates/{enrollment}/download', [AdminCertificateController::class, 'download'])->whereNumber('enrollment')->name('certificates.download');
 
         Route::get('/security', AdminSecurityController::class)
             ->name('security');
