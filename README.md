@@ -1,58 +1,259 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Learn With Flevian LMS
 
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="public/favicon-512x512.png" alt="Learn With Flevian LMS" width="140">
 </p>
 
-## About Laravel
+<h1 align="center">Learn With Flevian</h1>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<p align="center">
+  A complete digital learning platform for courses, assessments, assignments,
+  student progress, certificates, and online learning.
+</p>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+<p align="center">
+  <a href="https://lwf.yaliid.cloud">🌐 Visit Learn With Flevian</a>
+  ·
+  <a href="https://github.com/Flevian11/lwf-lms">💻 View Source</a>
+</p>
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+---
 
-## Learning Laravel
+## 🎓 About Learn With Flevian
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+**Learn With Flevian (LWF)** is an online Learning Management System designed to make learning accessible, organized, and easy to manage from one platform.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+The platform brings together the complete learning journey — from discovering a course and enrolling, to studying lessons, completing assignments and quizzes, tracking progress, and earning certificates.
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+It is built for learners and education providers who need a central place to deliver, manage, and experience online education.
 
-## Agentic Development
+### 🌐 Live Platform
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+**[https://lwf.yaliid.cloud](https://lwf.yaliid.cloud)**
 
-```bash
-composer require laravel/boost --dev
+The platform is live and available for use.
 
-php artisan boost:install
-```
+The project is also **open source**, with its source code publicly available on GitHub.
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+---
 
-## Contributing
+# ✨ What You Can Do
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 👨‍🎓 For Students
 
-## Code of Conduct
+Learn With Flevian gives students a complete learning environment where they can manage their learning journey from one dashboard.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Discover and Enroll
 
-## Security Vulnerabilities
+Students can:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- Browse available courses
+- View course information
+- Enroll in courses
+- Access available learning content
+- Track their enrolled courses
 
-## License
+### Learn at Your Own Pace
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Students can work through structured learning content and keep track of what they have completed.
+
+The platform helps learners understand:
+
+- Courses they are taking
+- Lessons and topics they have completed
+- Overall learning progress
+- Course completion status
+
+### 📝 Complete Assignments
+
+Students can receive assignments as part of their courses.
+
+They can:
+
+- View assigned work
+- Read assignment instructions
+- Submit their work
+- Track submission status
+- Receive grades and feedback
+
+### 🧠 Take Quizzes
+
+Students can complete online assessments and quizzes directly through the platform.
+
+The system supports:
+
+- Quiz attempts
+- Assessment questions
+- Results
+- Progress tracking
+- Secure assessment sessions
+- Quiz violation monitoring
+
+### 🏆 Achievements
+
+Students can earn achievements as they progress through their learning journey.
+
+Achievements provide learners with recognition for reaching important milestones.
+
+### 📜 Certificates
+
+Upon completing eligible learning requirements, students can receive certificates recognizing their achievement.
+
+Certificates can be generated and made available to the learner through the platform.
+
+---
+
+# 👨‍🏫 For Educators & Course Providers
+
+Learn With Flevian provides tools for managing the educational experience from course creation through student completion.
+
+Educators and administrators can manage:
+
+- Courses
+- Lessons and topics
+- Assignments
+- Quizzes
+- Students
+- Enrollments
+- Assessments
+- Student submissions
+- Grades
+- Achievements
+- Certificates
+
+This provides a centralized environment for delivering and monitoring learning.
+
+---
+
+# 🛠️ Administration
+
+The administrative side of Learn With Flevian provides visibility and control over the learning platform.
+
+Administrators can manage:
+
+### Students
+
+- Student accounts
+- Student activity
+- Enrollment information
+- Learning progress
+
+### Courses
+
+- Create courses
+- Edit courses
+- Organize learning content
+- Manage topics and lessons
+- Monitor course participation
+
+### Assignments
+
+- Create assignments
+- Allocate assignments to students
+- Review submissions
+- Grade submissions
+- Provide feedback
+
+### Quizzes
+
+- Create assessments
+- Manage questions
+- Allocate quizzes
+- Review attempts
+- Monitor assessment activity
+- Review results
+
+### Enrollments
+
+Administrators can manage course access and enrollment activity, including controlled access to paid courses.
+
+### Payments
+
+The platform provides payment management for courses that require payment.
+
+Payment functionality includes support for:
+
+- Course payments
+- Payment records
+- Payment status
+- M-Pesa payments
+- M-Pesa STK Push
+
+### Certificates
+
+Administrators can manage certificate issuance and recognize students who successfully complete eligible courses.
+
+### Achievements
+
+The system allows administrators to recognize learner milestones through achievements.
+
+### Reports
+
+Administrators can use learning and platform information to understand student activity, course participation, assessments, and other areas of the learning process.
+
+### Audit & Security
+
+Important administrative and platform activities can be recorded through audit and activity tracking features.
+
+---
+
+# 💳 M-Pesa Payments
+
+Learn With Flevian supports **M-Pesa payments** for paid learning opportunities.
+
+The platform can use M-Pesa STK Push to provide a convenient payment experience for learners.
+
+This allows a learner to initiate payment directly from the learning platform and have the payment status reflected within the system.
+
+---
+
+# 🤖 AI-Powered Learning
+
+Learn With Flevian includes AI capabilities that can be used to enhance the learning experience.
+
+The platform can provide AI-assisted functionality through configured AI services, giving the LMS the ability to support more interactive and intelligent learning experiences.
+
+AI functionality can be enabled or disabled depending on the platform configuration.
+
+---
+
+# 🔐 Account & Authentication
+
+Learn With Flevian provides multiple ways for users to securely access their accounts.
+
+Supported authentication capabilities include:
+
+- Email and password authentication
+- Google sign-in
+- GitHub sign-in
+- Passkeys
+- Secure account management
+
+The platform also includes security features for protecting learning and assessment activities.
+
+---
+
+# 📊 Your Learning Journey
+
+Learn With Flevian is designed around the complete learner journey:
+
+```text
+Discover a Course
+       ↓
+     Enroll
+       ↓
+   Start Learning
+       ↓
+ Complete Lessons
+       ↓
+ Submit Assignments
+       ↓
+   Take Quizzes
+       ↓
+ Track Progress
+       ↓
+ Complete Course
+       ↓
+ Earn Achievements
+       ↓
+ Receive Certificate
