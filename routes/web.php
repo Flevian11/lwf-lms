@@ -90,11 +90,6 @@ Route::get('/reset-password', function () {
 |--------------------------------------------------------------------------
 | Signed assignment submission downloads
 |--------------------------------------------------------------------------
-|
-| Email confirmation messages use a temporary signed URL so a student can
-| download the exact file they submitted without needing a second login.
-| The signature is the authorization boundary for this endpoint.
-|
 */
 
 Route::get('/assignments/{assignment}/submissions/{submission}/download/email', [
@@ -162,6 +157,12 @@ Route::middleware(['auth', AdminMiddleware::class])
         Route::get('/', AdminDashboardController::class)
             ->name('dashboard');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Courses
+        |--------------------------------------------------------------------------
+        */
+
         Route::get('/courses', [AdminCourseController::class, 'index'])
             ->name('courses.index');
 
@@ -175,6 +176,12 @@ Route::middleware(['auth', AdminMiddleware::class])
         Route::delete('/courses/{course}', [AdminCourseController::class, 'destroy'])
             ->whereNumber('course')
             ->name('courses.destroy');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Modules & Lessons
+        |--------------------------------------------------------------------------
+        */
 
         Route::get('/modules-lessons', [AdminModuleLessonController::class, 'index'])
             ->name('modules-lessons.index');
@@ -209,58 +216,159 @@ Route::middleware(['auth', AdminMiddleware::class])
             ->whereNumber('lesson')
             ->name('modules-lessons.lessons.move');
 
-        Route::get('/assignments', [AdminAssignmentController::class, 'index'])->name('assignments.index');
-        Route::post('/assignments', [AdminAssignmentController::class, 'store'])->name('assignments.store');
-        Route::put('/assignments/{assignment}', [AdminAssignmentController::class, 'update'])->whereNumber('assignment')->name('assignments.update');
-        Route::delete('/assignments/{assignment}', [AdminAssignmentController::class, 'destroy'])->whereNumber('assignment')->name('assignments.destroy');
-        Route::post('/assignments/{assignment}/allocate', [AdminAssignmentController::class, 'allocate'])->whereNumber('assignment')->name('assignments.allocate');
-        Route::post('/assignment-submissions/{submission}/grade', [AdminAssignmentController::class, 'grade'])->whereNumber('submission')->name('assignment-submissions.grade');
-        Route::get('/assignment-submissions/{submission}/download', [AdminAssignmentController::class, 'download'])->whereNumber('submission')->name('assignment-submissions.download');
+        /*
+        |--------------------------------------------------------------------------
+        | Assignments
+        |--------------------------------------------------------------------------
+        */
 
-        Route::get('/quizzes', [AdminQuizController::class, 'index'])->name('quizzes.index');
-        Route::post('/quizzes', [AdminQuizController::class, 'store'])->name('quizzes.store');
-        Route::put('/quizzes/{quiz}', [AdminQuizController::class, 'update'])->whereNumber('quiz')->name('quizzes.update');
-        Route::delete('/quizzes/{quiz}', [AdminQuizController::class, 'destroy'])->whereNumber('quiz')->name('quizzes.destroy');
-        Route::post('/quizzes/{quiz}/allocate', [AdminQuizController::class, 'allocate'])->whereNumber('quiz')->name('quizzes.allocate');
-        Route::post('/quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])->whereNumber('quiz')->name('quizzes.questions.store');
-        Route::put('/quiz-questions/{question}', [AdminQuizController::class, 'updateQuestion'])->whereNumber('question')->name('quiz-questions.update');
-        Route::delete('/quiz-questions/{question}', [AdminQuizController::class, 'destroyQuestion'])->whereNumber('question')->name('quiz-questions.destroy');
+        Route::get('/assignments', [AdminAssignmentController::class, 'index'])
+            ->name('assignments.index');
 
-        Route::get('/achievements', [AdminAchievementController::class, 'index'])->name('achievements.index');
-        Route::post('/achievements', [AdminAchievementController::class, 'store'])->name('achievements.store');
-        Route::put('/achievements/{achievement}', [AdminAchievementController::class, 'update'])->whereNumber('achievement')->name('achievements.update');
-        Route::delete('/achievements/{achievement}', [AdminAchievementController::class, 'destroy'])->whereNumber('achievement')->name('achievements.destroy');
-        Route::post('/achievements/{achievement}/award', [AdminAchievementController::class, 'award'])->whereNumber('achievement')->name('achievements.award');
+        Route::post('/assignments', [AdminAssignmentController::class, 'store'])
+            ->name('assignments.store');
 
-        Route::get('/students', [AdminStudentController::class, 'index'])->name('students.index');
-        Route::post('/students', [AdminStudentController::class, 'store'])->name('students.store');
-        Route::put('/students/{student}', [AdminStudentController::class, 'update'])->whereNumber('student')->name('students.update');
-        Route::post('/students/{student}/toggle-status', [AdminStudentController::class, 'toggleStatus'])->whereNumber('student')->name('students.toggle-status');
-        Route::delete('/students/{student}', [AdminStudentController::class, 'destroy'])->whereNumber('student')->name('students.destroy');
+        Route::put('/assignments/{assignment}', [AdminAssignmentController::class, 'update'])
+            ->whereNumber('assignment')
+            ->name('assignments.update');
 
-        Route::get('/enrollments', [AdminEnrollmentController::class, 'index'])->name('enrollments.index');
-        Route::post('/enrollments/{enrollment}/approve', [AdminEnrollmentController::class, 'approve'])->whereNumber('enrollment')->name('enrollments.approve');
-        Route::post('/enrollments/{enrollment}/grant-access', [AdminEnrollmentController::class, 'grantAccess'])->whereNumber('enrollment')->name('enrollments.grant-access');
-        Route::post('/enrollments/{enrollment}/suspend', [AdminEnrollmentController::class, 'suspend'])->whereNumber('enrollment')->name('enrollments.suspend');
-        Route::post('/enrollments/{enrollment}/cancel', [AdminEnrollmentController::class, 'cancel'])->whereNumber('enrollment')->name('enrollments.cancel');
+        Route::delete('/assignments/{assignment}', [AdminAssignmentController::class, 'destroy'])
+            ->whereNumber('assignment')
+            ->name('assignments.destroy');
 
-        Route::get('/achievements', [AdminAchievementController::class, 'index'])->name('achievements.index');
-        Route::post('/achievements', [AdminAchievementController::class, 'store'])->name('achievements.store');
-        Route::put('/achievements/{achievement}', [AdminAchievementController::class, 'update'])->whereNumber('achievement')->name('achievements.update');
-        Route::delete('/achievements/{achievement}', [AdminAchievementController::class, 'destroy'])->whereNumber('achievement')->name('achievements.destroy');
-        Route::post('/achievements/{achievement}/award', [AdminAchievementController::class, 'award'])->whereNumber('achievement')->name('achievements.award');
+        Route::post('/assignments/{assignment}/allocate', [AdminAssignmentController::class, 'allocate'])
+            ->whereNumber('assignment')
+            ->name('assignments.allocate');
 
-        Route::get('/students', [AdminStudentController::class, 'index'])->name('students.index');
-        Route::post('/students', [AdminStudentController::class, 'store'])->name('students.store');
-        Route::put('/students/{student}', [AdminStudentController::class, 'update'])->whereNumber('student')->name('students.update');
-        Route::post('/students/{student}/toggle-status', [AdminStudentController::class, 'toggleStatus'])->whereNumber('student')->name('students.toggle-status');
-        Route::delete('/students/{student}', [AdminStudentController::class, 'destroy'])->whereNumber('student')->name('students.destroy');
+        Route::post('/assignment-submissions/{submission}/grade', [AdminAssignmentController::class, 'grade'])
+            ->whereNumber('submission')
+            ->name('assignment-submissions.grade');
 
-        Route::get('/enrollments', [AdminEnrollmentController::class, 'index'])->name('enrollments.index');
-        Route::post('/enrollments/{enrollment}/approve', [AdminEnrollmentController::class, 'approve'])->whereNumber('enrollment')->name('enrollments.approve');
-        Route::post('/enrollments/{enrollment}/grant-access', [AdminEnrollmentController::class, 'grantAccess'])->whereNumber('enrollment')->name('enrollments.grant-access');
-        Route::post('/enrollments/{enrollment}/suspend', [AdminEnrollmentController::class, 'suspend'])->whereNumber('enrollment')->name('enrollments.suspend');
-        Route::post('/enrollments/{enrollment}/cancel', [AdminEnrollmentController::class, 'cancel'])->whereNumber('enrollment')->name('enrollments.cancel');
+        Route::get('/assignment-submissions/{submission}/download', [AdminAssignmentController::class, 'download'])
+            ->whereNumber('submission')
+            ->name('assignment-submissions.download');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Quizzes
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/quizzes', [AdminQuizController::class, 'index'])
+            ->name('quizzes.index');
+
+        Route::post('/quizzes', [AdminQuizController::class, 'store'])
+            ->name('quizzes.store');
+
+        Route::put('/quizzes/{quiz}', [AdminQuizController::class, 'update'])
+            ->whereNumber('quiz')
+            ->name('quizzes.update');
+
+        Route::delete('/quizzes/{quiz}', [AdminQuizController::class, 'destroy'])
+            ->whereNumber('quiz')
+            ->name('quizzes.destroy');
+
+        Route::post('/quizzes/{quiz}/allocate', [AdminQuizController::class, 'allocate'])
+            ->whereNumber('quiz')
+            ->name('quizzes.allocate');
+
+        Route::post('/quizzes/{quiz}/questions', [AdminQuizController::class, 'storeQuestion'])
+            ->whereNumber('quiz')
+            ->name('quizzes.questions.store');
+
+        Route::put('/quiz-questions/{question}', [AdminQuizController::class, 'updateQuestion'])
+            ->whereNumber('question')
+            ->name('quiz-questions.update');
+
+        Route::delete('/quiz-questions/{question}', [AdminQuizController::class, 'destroyQuestion'])
+            ->whereNumber('question')
+            ->name('quiz-questions.destroy');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Achievements
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/achievements', [AdminAchievementController::class, 'index'])
+            ->name('achievements.index');
+
+        Route::post('/achievements', [AdminAchievementController::class, 'store'])
+            ->name('achievements.store');
+
+        Route::put('/achievements/{achievement}', [AdminAchievementController::class, 'update'])
+            ->whereNumber('achievement')
+            ->name('achievements.update');
+
+        Route::delete('/achievements/{achievement}', [AdminAchievementController::class, 'destroy'])
+            ->whereNumber('achievement')
+            ->name('achievements.destroy');
+
+        Route::post('/achievements/{achievement}/award', [AdminAchievementController::class, 'award'])
+            ->whereNumber('achievement')
+            ->name('achievements.award');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Students
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/students', [AdminStudentController::class, 'index'])
+            ->name('students.index');
+
+        Route::post('/students', [AdminStudentController::class, 'store'])
+            ->name('students.store');
+
+        Route::put('/students/{student}', [AdminStudentController::class, 'update'])
+            ->whereNumber('student')
+            ->name('students.update');
+
+        Route::post('/students/{student}/toggle-status', [AdminStudentController::class, 'toggleStatus'])
+            ->whereNumber('student')
+            ->name('students.toggle-status');
+
+        Route::delete('/students/{student}', [AdminStudentController::class, 'destroy'])
+            ->whereNumber('student')
+            ->name('students.destroy');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Enrollments
+        |--------------------------------------------------------------------------
+        |
+        | The revoke-access route is explicitly registered here.
+        |
+        */
+
+        Route::get('/enrollments', [AdminEnrollmentController::class, 'index'])
+            ->name('enrollments.index');
+
+        Route::post('/enrollments/{enrollment}/approve', [AdminEnrollmentController::class, 'approve'])
+            ->whereNumber('enrollment')
+            ->name('enrollments.approve');
+
+        Route::post('/enrollments/{enrollment}/grant-access', [AdminEnrollmentController::class, 'grantAccess'])
+            ->whereNumber('enrollment')
+            ->name('enrollments.grant-access');
+
+        Route::post('/enrollments/{enrollment}/revoke-access', [AdminEnrollmentController::class, 'revokeAccess'])
+            ->whereNumber('enrollment')
+            ->name('enrollments.revoke-access');
+
+        Route::post('/enrollments/{enrollment}/suspend', [AdminEnrollmentController::class, 'suspend'])
+            ->whereNumber('enrollment')
+            ->name('enrollments.suspend');
+
+        Route::post('/enrollments/{enrollment}/cancel', [AdminEnrollmentController::class, 'cancel'])
+            ->whereNumber('enrollment')
+            ->name('enrollments.cancel');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Profile
+        |--------------------------------------------------------------------------
+        */
 
         Route::get('/profile', [
             AdminProfileController::class,
@@ -277,6 +385,12 @@ Route::middleware(['auth', AdminMiddleware::class])
             'sendVerification',
         ])->name('profile.verify-email');
 
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Settings
+        |--------------------------------------------------------------------------
+        */
+
         Route::get('/settings', AdminSettingsController::class)
             ->name('settings');
 
@@ -285,10 +399,36 @@ Route::middleware(['auth', AdminMiddleware::class])
             'clearAuditLogs',
         ])->name('settings.audit.clear');
 
-        Route::get('/reports', [AdminReportsController::class, 'index'])->name('reports.index');
-        Route::get('/reports/export', [AdminReportsController::class, 'exportPdf'])->name('reports.export');
-        Route::get('/certificates', [AdminCertificateController::class, 'index'])->name('certificates.index');
-        Route::get('/certificates/{enrollment}/download', [AdminCertificateController::class, 'download'])->whereNumber('enrollment')->name('certificates.download');
+        /*
+        |--------------------------------------------------------------------------
+        | Reports
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/reports', [AdminReportsController::class, 'index'])
+            ->name('reports.index');
+
+        Route::get('/reports/export', [AdminReportsController::class, 'exportPdf'])
+            ->name('reports.export');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Certificates
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/certificates', [AdminCertificateController::class, 'index'])
+            ->name('certificates.index');
+
+        Route::get('/certificates/{enrollment}/download', [AdminCertificateController::class, 'download'])
+            ->whereNumber('enrollment')
+            ->name('certificates.download');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin Security
+        |--------------------------------------------------------------------------
+        */
 
         Route::get('/security', AdminSecurityController::class)
             ->name('security');
@@ -303,6 +443,12 @@ Route::middleware(['auth', AdminMiddleware::class])
             'disableTwoFactor',
         ])->name('security.two-factor.disable');
     });
+
+/*
+|--------------------------------------------------------------------------
+| Student Application
+|--------------------------------------------------------------------------
+*/
 
 Route::middleware(['auth'])->group(function (): void {
 
@@ -381,19 +527,14 @@ Route::middleware(['auth'])->group(function (): void {
     Route::delete('/chatbot/conversations/{conversation}/messages/{message}', [
         StudentChatbotController::class,
         'destroyMessage',
-    ])->whereNumber(['conversation', 'message'])->name('chatbot.messages.destroy');
-
+    ])
+        ->whereNumber(['conversation', 'message'])
+        ->name('chatbot.messages.destroy');
 
     /*
     |--------------------------------------------------------------------------
     | Achievements, Academic Transcript & Certificates
     |--------------------------------------------------------------------------
-    |
-    | Student achievement records are read from the server.
-    |
-    | Certificates are only downloadable for the authenticated student's
-    | own completed course enrollment.
-    |
     */
 
     Route::get('/achievements', [
@@ -417,10 +558,6 @@ Route::middleware(['auth'])->group(function (): void {
     |--------------------------------------------------------------------------
     | Assignments
     |--------------------------------------------------------------------------
-    |
-    | Students can only see and submit assignments belonging to courses
-    | where they have an active enrollment with granted access.
-    |
     */
 
     Route::get('/assignments', [
@@ -460,12 +597,6 @@ Route::middleware(['auth'])->group(function (): void {
     |--------------------------------------------------------------------------
     | Quizzes
     |--------------------------------------------------------------------------
-    |
-    | Quiz attempts are server-authoritative. The browser is responsible for
-    | presenting the secure attempt interface and reporting observable
-    | security events; scoring, expiry and violation counting happen on the
-    | server.
-    |
     */
 
     Route::get('/quizzes', [
@@ -581,11 +712,6 @@ Route::middleware(['auth'])->group(function (): void {
     |--------------------------------------------------------------------------
     | Course Catalogue
     |--------------------------------------------------------------------------
-    |
-    | Shows all published courses.
-    |
-    | Payment status does NOT hide courses from the catalogue.
-    |
     */
 
     Route::get('/courses', StudentCoursesController::class)
@@ -595,13 +721,6 @@ Route::middleware(['auth'])->group(function (): void {
     |--------------------------------------------------------------------------
     | Protected Course Learning
     |--------------------------------------------------------------------------
-    |
-    | IMPORTANT:
-    |
-    | This route comes BEFORE /courses/{slug}.
-    |
-    | CourseController::learn() performs the server-side access check.
-    |
     */
 
     Route::post('/courses/{slug}/enroll', [
@@ -618,12 +737,6 @@ Route::middleware(['auth'])->group(function (): void {
     |--------------------------------------------------------------------------
     | Course Overview
     |--------------------------------------------------------------------------
-    |
-    | Safe course information / overview endpoint.
-    |
-    | The frontend preview now uses catalogue data directly, but this
-    | endpoint remains useful for direct course overview pages.
-    |
     */
 
     Route::get('/courses/{slug}', [

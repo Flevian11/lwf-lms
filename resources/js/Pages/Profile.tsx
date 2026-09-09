@@ -73,7 +73,12 @@ function ProviderMark({ provider }: { provider: 'google' | 'github' }) {
             aria-hidden="true"
             className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
         >
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+            <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="currentColor"
+                aria-hidden="true"
+            >
                 <path d="M12 .5a12 12 0 0 0-3.79 23.39c.6.11.82-.26.82-.58v-2.24c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.74.08-.74 1.2.09 1.84 1.23 1.84 1.23 1.07 1.83 2.8 1.3 3.49.99.11-.77.42-1.3.76-1.6-2.67-.3-5.47-1.34-5.47-5.95 0-1.31.47-2.38 1.23-3.22-.12-.3-.53-1.52.12-3.18 0 0 1-.32 3.3 1.23A11.47 11.47 0 0 1 12 6.06c1.02 0 2.05.14 3.01.41 2.3-1.55 3.3-1.23 3.3-1.23.65 1.66.24 2.88.12 3.18.77.84 1.23 1.91 1.23 3.22 0 4.62-2.81 5.64-5.49 5.94.43.37.81 1.1.81 2.22v3.29c0 .32.22.69.83.57A12 12 0 0 0 12 .5Z" />
             </svg>
         </span>
@@ -131,6 +136,7 @@ export default function Profile() {
     } = usePage<ProfilePageProps>().props
 
     const avatarInput = useRef<HTMLInputElement | null>(null)
+
     const [avatarPreview, setAvatarPreview] = useState<string | null>(
         assetUrl(profile.avatar_path),
     )
@@ -151,6 +157,8 @@ export default function Profile() {
         learning_interest_ids: selectedLearningInterestIds,
     })
 
+    const verificationForm = useForm({})
+
     const selectedNames = useMemo(
         () =>
             learningInterests
@@ -163,7 +171,10 @@ export default function Profile() {
 
     const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0] ?? null
-        if (!file) return
+
+        if (!file) {
+            return
+        }
 
         form.setData('avatar', file)
         setAvatarPreview(URL.createObjectURL(file))
@@ -187,6 +198,12 @@ export default function Profile() {
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => form.setData('avatar', null),
+        })
+    }
+
+    const sendVerificationEmail = () => {
+        verificationForm.post('/email/verification-notification', {
+            preserveScroll: true,
         })
     }
 
@@ -225,17 +242,21 @@ export default function Profile() {
                                     'radial-gradient(circle at 86% 20%, rgba(76,141,255,.35), transparent 30%), radial-gradient(circle at 18% 100%, rgba(68,56,168,.28), transparent 34%)',
                             }}
                         />
+
                         <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
                             <div>
                                 <div className="flex items-center gap-2 text-[#a9c7ff]">
                                     <Icon name="user" className="h-4 w-4" />
+
                                     <span className="text-[10px] font-bold uppercase tracking-[0.2em]">
                                         Account profile
                                     </span>
                                 </div>
+
                                 <h1 className="mt-2 text-2xl font-bold tracking-[-0.035em] sm:text-3xl">
                                     Your profile
                                 </h1>
+
                                 <p className="mt-2 max-w-xl text-xs leading-5 text-blue-100/75 sm:text-sm">
                                     Manage your personal details, preferences and
                                     learning interests.
@@ -254,10 +275,12 @@ export default function Profile() {
                                         initials(profile.name)
                                     )}
                                 </div>
+
                                 <div className="min-w-0">
                                     <p className="max-w-[170px] truncate text-sm font-bold">
                                         {profile.name}
                                     </p>
+
                                     <p className="text-[10px] text-slate-300">
                                         {profile.role ?? 'Student'}
                                     </p>
@@ -272,9 +295,23 @@ export default function Profile() {
                         </div>
                     )}
 
+                    {verificationForm.recentlySuccessful && (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/20 dark:text-emerald-300">
+                            A new verification link has been sent to your email
+                            address.
+                        </div>
+                    )}
+
                     {form.hasErrors && (
                         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
                             Please correct the highlighted fields and try again.
+                        </div>
+                    )}
+
+                    {verificationForm.hasErrors && (
+                        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs font-semibold text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+                            We could not send the verification email. Please try
+                            again.
                         </div>
                     )}
 
@@ -310,10 +347,15 @@ export default function Profile() {
 
                                         <button
                                             type="button"
-                                            onClick={() => avatarInput.current?.click()}
+                                            onClick={() =>
+                                                avatarInput.current?.click()
+                                            }
                                             className="inline-flex h-9 items-center gap-2 rounded-xl bg-[#1554c0] px-3.5 text-xs font-bold text-white transition hover:bg-[#1048a8]"
                                         >
-                                            <Icon name="user" className="h-3.5 w-3.5" />
+                                            <Icon
+                                                name="user"
+                                                className="h-3.5 w-3.5"
+                                            />
                                             Change photo
                                         </button>
 
@@ -334,6 +376,7 @@ export default function Profile() {
                                         label="Role"
                                         value={profile.role ?? 'Student'}
                                     />
+
                                     <InfoItem
                                         label="Member since"
                                         value={formatDate(
@@ -349,8 +392,17 @@ export default function Profile() {
                                     description="The details used across your Learn With Flevian account."
                                 />
 
-                                <input type="hidden" name="timezone" value="Africa/Nairobi" />
-                                <input type="hidden" name="locale" value="en" />
+                                <input
+                                    type="hidden"
+                                    name="timezone"
+                                    value="Africa/Nairobi"
+                                />
+
+                                <input
+                                    type="hidden"
+                                    name="locale"
+                                    value="en"
+                                />
 
                                 <div className="mt-5 grid gap-4 sm:grid-cols-2">
                                     <div className="sm:col-span-2">
@@ -360,6 +412,7 @@ export default function Profile() {
                                         >
                                             Full name
                                         </label>
+
                                         <input
                                             id="profile-name"
                                             value={form.data.name}
@@ -371,6 +424,7 @@ export default function Profile() {
                                             }
                                             className="h-10.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs outline-none transition focus:border-[#1554c0] focus:ring-4 focus:ring-[#1554c0]/10 dark:border-slate-700 dark:bg-slate-900/60 dark:text-white"
                                         />
+
                                         {form.errors.name && (
                                             <p className="mt-1 text-[10px] font-medium text-red-600">
                                                 {form.errors.name}
@@ -379,13 +433,14 @@ export default function Profile() {
                                     </div>
 
                                     <div className="sm:col-span-2">
-                                        <div className="mb-1.5 flex items-center justify-between">
+                                        <div className="mb-1.5 flex items-center justify-between gap-3">
                                             <label
                                                 htmlFor="profile-email"
                                                 className="block text-xs font-bold text-slate-700 dark:text-slate-200"
                                             >
                                                 Email address
                                             </label>
+
                                             <span
                                                 className={[
                                                     'rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-[0.1em]',
@@ -399,6 +454,7 @@ export default function Profile() {
                                                     : 'Unverified'}
                                             </span>
                                         </div>
+
                                         <input
                                             id="profile-email"
                                             type="email"
@@ -411,13 +467,90 @@ export default function Profile() {
                                             }
                                             className="h-10.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-xs outline-none transition focus:border-[#1554c0] focus:ring-4 focus:ring-[#1554c0]/10 dark:border-slate-700 dark:bg-slate-900/60 dark:text-white"
                                         />
+
                                         <p className="mt-1.5 text-[10px] text-slate-400">
-                                            Changing your email requires verification again.
+                                            Changing your email requires verification
+                                            again.
                                         </p>
+
                                         {form.errors.email && (
                                             <p className="mt-1 text-[10px] font-medium text-red-600">
                                                 {form.errors.email}
                                             </p>
+                                        )}
+
+                                        {!profile.email_verified_at && (
+                                            <div className="mt-3 flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50/70 p-3.5 dark:border-amber-900/40 dark:bg-amber-950/20 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="min-w-0">
+                                                    <p className="text-[11px] font-bold text-amber-800 dark:text-amber-200">
+                                                        Email verification required
+                                                    </p>
+
+                                                    <p className="mt-0.5 text-[10px] leading-4 text-amber-700/80 dark:text-amber-300/70">
+                                                        Verify your email address to
+                                                        secure your account and access
+                                                        email-protected features.
+                                                    </p>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={sendVerificationEmail}
+                                                    disabled={
+                                                        verificationForm.processing
+                                                    }
+                                                    className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1554c0] px-3.5 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#1048a8] disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    {verificationForm.processing ? (
+                                                        <>
+                                                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                                                            Sending...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <svg
+                                                                viewBox="0 0 24 24"
+                                                                className="h-3.5 w-3.5"
+                                                                fill="none"
+                                                                stroke="currentColor"
+                                                                strokeWidth="2"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2Z" />
+                                                                <path d="m22 6-10 7L2 6" />
+                                                            </svg>
+                                                            Verify email
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {profile.email_verified_at && (
+                                            <div className="mt-3 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-3 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                                                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white">
+                                                    <svg
+                                                        viewBox="0 0 24 24"
+                                                        className="h-3.5 w-3.5"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        strokeWidth="3"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <path d="m5 12 4 4L19 6" />
+                                                    </svg>
+                                                </span>
+
+                                                <div>
+                                                    <p className="text-[10px] font-bold text-emerald-800 dark:text-emerald-200">
+                                                        Email verified
+                                                    </p>
+
+                                                    <p className="text-[9px] text-emerald-700/70 dark:text-emerald-300/70">
+                                                        Your email address is verified.
+                                                    </p>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
 
@@ -425,10 +558,12 @@ export default function Profile() {
                                         <p className="mb-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">
                                             Timezone
                                         </p>
+
                                         <div className="flex h-10.5 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs dark:border-slate-700 dark:bg-slate-900/60">
                                             <span className="font-semibold text-slate-700 dark:text-slate-200">
                                                 East Africa Time (Nairobi)
                                             </span>
+
                                             <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                                                 Fixed
                                             </span>
@@ -439,10 +574,12 @@ export default function Profile() {
                                         <p className="mb-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">
                                             Language
                                         </p>
+
                                         <div className="flex h-10.5 items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-xs dark:border-slate-700 dark:bg-slate-900/60">
                                             <span className="font-semibold text-slate-700 dark:text-slate-200">
                                                 English
                                             </span>
+
                                             <span className="rounded-full bg-slate-200/80 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-500 dark:bg-slate-800 dark:text-slate-400">
                                                 Fixed
                                             </span>
@@ -509,6 +646,7 @@ export default function Profile() {
                                                     <span className="truncate text-[11px] font-semibold text-slate-800 dark:text-slate-100">
                                                         {interest.name}
                                                     </span>
+
                                                     <span
                                                         className={[
                                                             'flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold',
@@ -535,8 +673,16 @@ export default function Profile() {
                                 <div className="mt-4 space-y-2.5">
                                     {(
                                         [
-                                            ['google', 'Google', linkedAccounts.google],
-                                            ['github', 'GitHub', linkedAccounts.github],
+                                            [
+                                                'google',
+                                                'Google',
+                                                linkedAccounts.google,
+                                            ],
+                                            [
+                                                'github',
+                                                'GitHub',
+                                                linkedAccounts.github,
+                                            ],
                                         ] as const
                                     ).map(([provider, label, linked]) => (
                                         <div
@@ -549,6 +695,7 @@ export default function Profile() {
                                                 <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
                                                     {label}
                                                 </p>
+
                                                 <p className="mt-0.5 text-[10px] text-slate-400">
                                                     {linked
                                                         ? `Account linked with ${label}`
@@ -563,8 +710,9 @@ export default function Profile() {
 
                                 <div className="mt-4 rounded-xl border border-[#dbe5f3] bg-[#f7faff] px-3 py-2.5 dark:border-slate-800 dark:bg-slate-900/70">
                                     <p className="text-[10px] leading-4 text-slate-500 dark:text-slate-400">
-                                        Linked accounts are managed by your authentication
-                                        provider and are shown here for account visibility.
+                                        Linked accounts are managed by your
+                                        authentication provider and are shown here
+                                        for account visibility.
                                     </p>
                                 </div>
                             </Card>
@@ -576,19 +724,26 @@ export default function Profile() {
                                     <p className="text-xs font-bold text-slate-800 dark:text-white">
                                         Account information
                                     </p>
+
                                     <div className="mt-2 flex flex-wrap gap-2">
                                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                                             {profile.role ?? 'Student'}
                                         </span>
+
                                         <span className="rounded-full bg-[#1554c0]/[0.07] px-2.5 py-1 text-[9px] font-semibold text-[#1554c0] dark:bg-[#4c8dff]/10 dark:text-[#6ba3ff]">
                                             {stats.courses.active} active course
                                             {stats.courses.active === 1 ? '' : 's'}
                                         </span>
+
                                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                                             {stats.progress.percentage}% progress
                                         </span>
+
                                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                                            Joined {formatDate(profile.onboarding_completed_at)}
+                                            Joined{' '}
+                                            {formatDate(
+                                                profile.onboarding_completed_at,
+                                            )}
                                         </span>
                                     </div>
                                 </div>
@@ -602,12 +757,15 @@ export default function Profile() {
                                     >
                                         Reset
                                     </button>
+
                                     <button
                                         type="submit"
                                         disabled={form.processing}
                                         className="h-9 rounded-xl bg-[#1554c0] px-4 text-[10px] font-bold text-white shadow-sm transition hover:bg-[#1048a8] disabled:cursor-not-allowed disabled:opacity-60"
                                     >
-                                        {form.processing ? 'Saving...' : 'Save changes'}
+                                        {form.processing
+                                            ? 'Saving...'
+                                            : 'Save changes'}
                                     </button>
                                 </div>
                             </div>

@@ -33,7 +33,10 @@ class AdminEnrollmentController extends Controller
                     ->orWhereHas('course', fn ($c) => $c
                         ->where('title', 'like', "%{$search}%"));
             }))
-            ->when(in_array($status, ['active', 'completed', 'paused', 'cancelled'], true), fn ($q) => $q->where('status', $status))
+            ->when(
+                in_array($status, ['active', 'completed', 'paused', 'cancelled'], true),
+                fn ($q) => $q->where('status', $status)
+            )
             ->when($courseId > 0, fn ($q) => $q->where('course_id', $courseId));
 
         $pending = (clone $base)
@@ -56,7 +59,10 @@ class AdminEnrollmentController extends Controller
             'admin' => $this->adminPayload($request),
             'pending' => $pending,
             'full_access' => $fullAccess,
-            'courses' => DB::table('courses')->select('id', 'title')->orderBy('title')->get(),
+            'courses' => DB::table('courses')
+                ->select('id', 'title')
+                ->orderBy('title')
+                ->get(),
             'filters' => [
                 'search' => $search,
                 'status' => $status,
@@ -66,9 +72,15 @@ class AdminEnrollmentController extends Controller
                 'total' => CourseEnrollment::count(),
                 'active' => CourseEnrollment::where('status', 'active')->count(),
                 'completed' => CourseEnrollment::where('status', 'completed')->count(),
-                'pending' => CourseEnrollment::whereNull('access_granted_at')->whereNotIn('status', ['cancelled'])->count(),
-                'full_access' => CourseEnrollment::whereNotNull('access_granted_at')->whereNotIn('status', ['cancelled'])->count(),
-                'awaiting_access' => CourseEnrollment::whereNull('access_granted_at')->whereNotIn('status', ['cancelled', 'paused'])->count(),
+                'pending' => CourseEnrollment::whereNull('access_granted_at')
+                    ->whereNotIn('status', ['cancelled'])
+                    ->count(),
+                'full_access' => CourseEnrollment::whereNotNull('access_granted_at')
+                    ->whereNotIn('status', ['cancelled'])
+                    ->count(),
+                'awaiting_access' => CourseEnrollment::whereNull('access_granted_at')
+                    ->whereNotIn('status', ['cancelled', 'paused'])
+                    ->count(),
                 'paused' => CourseEnrollment::where('status', 'paused')->count(),
                 'cancelled' => CourseEnrollment::where('status', 'cancelled')->count(),
             ],
@@ -99,8 +111,30 @@ class AdminEnrollmentController extends Controller
     public function approve(Request $request, int $enrollment)
     {
         $record = CourseEnrollment::with(['user', 'course'])->findOrFail($enrollment);
-        $record->forceFill(['status' => 'active', 'approved_by' => $request->user()->id, 'approved_at' => now(), 'access_granted_at' => now(), 'started_at' => $record->started_at ?: now()])->save();
-        $this->auditLogService->resourceEvent('enrollment_approved', 'course_enrollment', $record->id, ['action' => 'approve_enrollment', 'metadata' => ['user_id' => $record->user_id, 'course_id' => $record->course_id, 'access_granted' => true]]);
+
+        $record->forceFill([
+            'status' => 'active',
+            'approved_by' => $request->user()->id,
+            'approved_at' => now(),
+            'access_granted_at' => now(),
+            'started_at' => $record->started_at ?: now(),
+        ])->save();
+
+        $this->auditLogService->resourceEvent(
+            'enrollment_approved',
+            'course_enrollment',
+            $record->id,
+            $request,
+            [
+                'action' => 'approve_enrollment',
+                'metadata' => [
+                    'user_id' => $record->user_id,
+                    'course_id' => $record->course_id,
+                    'access_granted' => true,
+                ],
+            ]
+        );
+
         return back()->with('success', 'Enrollment approved and course access granted.');
     }
 
@@ -112,13 +146,19 @@ class AdminEnrollmentController extends Controller
             'access_granted_at' => null,
         ])->save();
 
-        $this->auditLogService->resourceEvent('enrollment_access_revoked', 'course_enrollment', $record->id, [
-            'action' => 'revoke_course_access',
-            'metadata' => [
-                'user_id' => $record->user_id,
-                'course_id' => $record->course_id,
-            ],
-        ]);
+        $this->auditLogService->resourceEvent(
+            'enrollment_access_revoked',
+            'course_enrollment',
+            $record->id,
+            $request,
+            [
+                'action' => 'revoke_course_access',
+                'metadata' => [
+                    'user_id' => $record->user_id,
+                    'course_id' => $record->course_id,
+                ],
+            ]
+        );
 
         return back()->with('success', 'Course access revoked. The enrollment remains on record.');
     }
@@ -126,30 +166,83 @@ class AdminEnrollmentController extends Controller
     public function suspend(Request $request, int $enrollment)
     {
         $record = CourseEnrollment::findOrFail($enrollment);
-        $record->update(['status' => 'paused']);
-        $this->auditLogService->resourceEvent('enrollment_suspended', 'course_enrollment', $record->id, ['action' => 'suspend_enrollment']);
+
+        $record->update([
+            'status' => 'paused',
+        ]);
+
+        $this->auditLogService->resourceEvent(
+            'enrollment_suspended',
+            'course_enrollment',
+            $record->id,
+            $request,
+            [
+                'action' => 'suspend_enrollment',
+            ]
+        );
+
         return back()->with('success', 'Enrollment paused.');
     }
 
     public function cancel(Request $request, int $enrollment)
     {
         $record = CourseEnrollment::findOrFail($enrollment);
-        $record->update(['status' => 'cancelled']);
-        $this->auditLogService->resourceEvent('enrollment_cancelled', 'course_enrollment', $record->id, ['action' => 'cancel_enrollment']);
+
+        $record->update([
+            'status' => 'cancelled',
+        ]);
+
+        $this->auditLogService->resourceEvent(
+            'enrollment_cancelled',
+            'course_enrollment',
+            $record->id,
+            $request,
+            [
+                'action' => 'cancel_enrollment',
+            ]
+        );
+
         return back()->with('success', 'Enrollment cancelled.');
     }
 
     public function grantAccess(Request $request, int $enrollment)
     {
         $record = CourseEnrollment::findOrFail($enrollment);
-        $record->forceFill(['access_granted_at' => now(), 'approved_by' => $record->approved_by ?: $request->user()->id, 'approved_at' => $record->approved_at ?: now(), 'status' => $record->status === 'cancelled' ? 'active' : $record->status])->save();
-        $this->auditLogService->resourceEvent('enrollment_access_granted', 'course_enrollment', $record->id, ['action' => 'grant_course_access', 'metadata' => ['user_id' => $record->user_id, 'course_id' => $record->course_id]]);
+
+        $record->forceFill([
+            'access_granted_at' => now(),
+            'approved_by' => $record->approved_by ?: $request->user()->id,
+            'approved_at' => $record->approved_at ?: now(),
+            'status' => $record->status === 'cancelled' ? 'active' : $record->status,
+        ])->save();
+
+        $this->auditLogService->resourceEvent(
+            'enrollment_access_granted',
+            'course_enrollment',
+            $record->id,
+            $request,
+            [
+                'action' => 'grant_course_access',
+                'metadata' => [
+                    'user_id' => $record->user_id,
+                    'course_id' => $record->course_id,
+                ],
+            ]
+        );
+
         return back()->with('success', 'Course access granted.');
     }
 
     private function adminPayload(Request $request): array
     {
         $admin = $request->user();
-        return ['id' => $admin->id, 'name' => $admin->name, 'email' => $admin->email, 'avatar_path' => $admin->avatar_path, 'email_two_factor_enabled' => (bool) $admin->email_two_factor_enabled];
+
+        return [
+            'id' => $admin->id,
+            'name' => $admin->name,
+            'email' => $admin->email,
+            'avatar_path' => $admin->avatar_path,
+            'email_two_factor_enabled' => (bool) $admin->email_two_factor_enabled,
+        ];
     }
 }
