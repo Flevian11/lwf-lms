@@ -37,6 +37,8 @@ use App\Support\AuthenticatedUserRedirect;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Http\Controllers\AdminProgressController;
+use App\Http\Controllers\StudentProgressController;
 
 /*
 |--------------------------------------------------------------------------
@@ -179,6 +181,36 @@ Route::middleware(['auth', AdminMiddleware::class])
 
         /*
         |--------------------------------------------------------------------------
+        | Progress Tracking
+        |--------------------------------------------------------------------------
+        */
+
+        Route::get('/progress', [AdminProgressController::class, 'index'])
+            ->name('progress.index');
+
+        Route::post('/progress/{enrollment}/lessons/{lesson}/toggle', [
+            AdminProgressController::class,
+            'toggleLesson',
+        ])
+            ->whereNumber(['enrollment', 'lesson'])
+            ->name('progress.lessons.toggle');
+
+        Route::post('/progress/{enrollment}/modules/{module}/toggle', [
+            AdminProgressController::class,
+            'toggleModule',
+        ])
+            ->whereNumber(['enrollment', 'module'])
+            ->name('progress.modules.toggle');
+
+        Route::post('/progress/{enrollment}/reset', [
+            AdminProgressController::class,
+            'reset',
+        ])
+            ->whereNumber('enrollment')
+            ->name('progress.reset');
+
+        /*
+        |--------------------------------------------------------------------------
         | Modules & Lessons
         |--------------------------------------------------------------------------
         */
@@ -215,6 +247,19 @@ Route::middleware(['auth', AdminMiddleware::class])
         Route::post('/modules-lessons/lessons/{lesson}/move', [AdminModuleLessonController::class, 'moveLesson'])
             ->whereNumber('lesson')
             ->name('modules-lessons.lessons.move');
+        Route::post('/modules-lessons/lessons/{lesson}/materials', [
+            AdminModuleLessonController::class,
+            'storeMaterial',
+        ])
+            ->whereNumber('lesson')
+            ->name('modules-lessons.materials.store');
+
+        Route::delete('/modules-lessons/materials/{material}', [
+            AdminModuleLessonController::class,
+            'destroyMaterial',
+        ])
+            ->whereNumber('material')
+            ->name('modules-lessons.materials.destroy');
 
         /*
         |--------------------------------------------------------------------------
@@ -717,6 +762,15 @@ Route::middleware(['auth'])->group(function (): void {
     Route::get('/courses', StudentCoursesController::class)
         ->name('courses');
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Student Progress
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/progress', [StudentProgressController::class, 'index'])
+        ->name('progress.index');
     /*
     |--------------------------------------------------------------------------
     | Protected Course Learning

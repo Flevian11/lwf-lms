@@ -7,6 +7,9 @@ use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use App\Models\CourseEnrollment;
+use App\Models\Lesson;
+use App\Models\LessonProgress;
 
 class StudentDashboardService
 {
@@ -115,32 +118,48 @@ class StudentDashboardService
     /**
      * Overall lesson completion.
      */
-    private function progressStats(User $user): array
-    {
-        $progress = $user->lessonProgress();
+   private function progressStats(User $user): array
+{
+    $courseIds = CourseEnrollment::query()
+        ->where('user_id', $user->id)
+        ->whereNotIn('status', ['cancelled'])
+        ->pluck('course_id');
 
-        $total = (clone $progress)->count();
-
-        if ($total === 0) {
-            return [
-                'percentage' => 0,
-                'completed_lessons' => 0,
-                'tracked_lessons' => 0,
-            ];
-        }
-
-        $completed = (clone $progress)
-            ->where('status', 'completed')
-            ->count();
-
+    if ($courseIds->isEmpty()) {
         return [
-            'percentage' => (int) round(
-                ($completed / $total) * 100
-            ),
-            'completed_lessons' => $completed,
-            'tracked_lessons' => $total,
+            'percentage' => 0,
+            'completed_lessons' => 0,
+            'tracked_lessons' => 0,
         ];
     }
+
+    $lessonIds = Lesson::query()
+        ->whereHas('module', fn ($q) => $q->whereIn('course_id', $courseIds))
+        ->where('status', 'published')
+        ->pluck('id');
+
+    $total = $lessonIds->count();
+
+    if ($total === 0) {
+        return [
+            'percentage' => 0,
+            'completed_lessons' => 0,
+            'tracked_lessons' => 0,
+        ];
+    }
+
+    $completed = LessonProgress::query()
+        ->where('user_id', $user->id)
+        ->whereIn('lesson_id', $lessonIds)
+        ->where('status', 'completed')
+        ->count();
+
+    return [
+        'percentage' => (int) round(($completed / $total) * 100),
+        'completed_lessons' => $completed,
+        'tracked_lessons' => $total,
+    ];
+}
 
     /**
      * Total points earned by the student.

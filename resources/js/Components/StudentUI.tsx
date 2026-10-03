@@ -209,6 +209,19 @@ export function Icon({
                 <path d="m13.5 6.5 4 4" {...common} />
             </>
         ),
+                eye: (
+            <>
+                <path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z" {...common} />
+                <circle cx="12" cy="12" r="3" {...common} />
+            </>
+        ),
+        download: (
+            <>
+                <path d="M12 4v12" {...common} />
+                <path d="m7 11 5 5 5-5" {...common} />
+                <path d="M5 20h14" {...common} />
+            </>
+        ),
     }
 
     return (

@@ -1,29 +1,29 @@
 {
-  "_AdminLayout-C1FROgY9.js": {
-    "file": "assets/AdminLayout-C1FROgY9.js",
+  "_AdminLayout-Cm6dNNWg.js": {
+    "file": "assets/AdminLayout-Cm6dNNWg.js",
     "name": "AdminLayout",
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js"
+      "_StudentUI-DEf0CfPE.js"
     ]
   },
-  "_AdminPremiumUI-BQ-zKzt3.js": {
-    "file": "assets/AdminPremiumUI-BQ-zKzt3.js",
+  "_AdminPremiumUI-DPOr2Sa1.js": {
+    "file": "assets/AdminPremiumUI-DPOr2Sa1.js",
     "name": "AdminPremiumUI",
     "imports": [
       "resources/js/app.tsx"
     ]
   },
-  "_StudentLayout-Dj0wFSg5.js": {
-    "file": "assets/StudentLayout-Dj0wFSg5.js",
+  "_StudentLayout-DKOjNlqY.js": {
+    "file": "assets/StudentLayout-DKOjNlqY.js",
     "name": "StudentLayout",
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js"
+      "_StudentUI-DEf0CfPE.js"
     ]
   },
-  "_StudentUI-BcVA6w7j.js": {
-    "file": "assets/StudentUI-BcVA6w7j.js",
+  "_StudentUI-DEf0CfPE.js": {
+    "file": "assets/StudentUI-DEf0CfPE.js",
     "name": "StudentUI",
     "imports": [
       "resources/js/app.tsx"
@@ -61,8 +61,8 @@
     "file": "assets/passkeys-BQIvBaZd-Cn7xR2IQ.js",
     "name": "passkeys-BQIvBaZd"
   },
-  "_react-CHKftzr7.js": {
-    "file": "assets/react-CHKftzr7.js",
+  "_react-ClM8av3A.js": {
+    "file": "assets/react-ClM8av3A.js",
     "name": "react",
     "imports": [
       "resources/js/app.tsx",
@@ -70,184 +70,197 @@
     ]
   },
   "resources/js/Pages/Achievements.tsx": {
-    "file": "assets/Achievements-CCp6vIvF.js",
+    "file": "assets/Achievements-DWSHyLae.js",
     "name": "Achievements",
     "src": "resources/js/Pages/Achievements.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Admin/Achievements.tsx": {
-    "file": "assets/Achievements-BlasgNaT.js",
+    "file": "assets/Achievements-DiBC8Q9M.js",
     "name": "Achievements",
     "src": "resources/js/Pages/Admin/Achievements.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_AdminLayout-C1FROgY9.js",
-      "_AdminPremiumUI-BQ-zKzt3.js"
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Admin/Assignments.tsx": {
-    "file": "assets/Assignments-CO6T6JtC.js",
+    "file": "assets/Assignments-CJJCk_B3.js",
     "name": "Assignments",
     "src": "resources/js/Pages/Admin/Assignments.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_AdminLayout-C1FROgY9.js",
-      "_AdminPremiumUI-BQ-zKzt3.js"
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Admin/Certificates.tsx": {
-    "file": "assets/Certificates-Di0iot5A.js",
+    "file": "assets/Certificates-7QMf0Tub.js",
     "name": "Certificates",
     "src": "resources/js/Pages/Admin/Certificates.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_AdminLayout-C1FROgY9.js",
-      "_AdminPremiumUI-BQ-zKzt3.js"
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Admin/Courses.tsx": {
-    "file": "assets/Courses-CDh8RFyK.js",
+    "file": "assets/Courses-DrKDtKVF.js",
     "name": "Courses",
     "src": "resources/js/Pages/Admin/Courses.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_AdminLayout-C1FROgY9.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_AdminLayout-Cm6dNNWg.js"
     ]
   },
   "resources/js/Pages/Admin/Dashboard.tsx": {
-    "file": "assets/Dashboard-TqJjDdN4.js",
+    "file": "assets/Dashboard-Dieec2xa.js",
     "name": "Dashboard",
     "src": "resources/js/Pages/Admin/Dashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_AdminLayout-C1FROgY9.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_AdminLayout-Cm6dNNWg.js"
     ]
   },
   "resources/js/Pages/Admin/Enrollments.tsx": {
-    "file": "assets/Enrollments-D5iSHZ_L.js",
+    "file": "assets/Enrollments-DW2NSO1n.js",
     "name": "Enrollments",
     "src": "resources/js/Pages/Admin/Enrollments.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_AdminLayout-C1FROgY9.js",
-      "_AdminPremiumUI-BQ-zKzt3.js"
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Admin/ModulesLessons.tsx": {
-    "file": "assets/ModulesLessons-BNhH8LRl.js",
+    "file": "assets/ModulesLessons-zJoMdQW1.js",
     "name": "ModulesLessons",
     "src": "resources/js/Pages/Admin/ModulesLessons.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_AdminLayout-C1FROgY9.js"
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Admin/Profile.tsx": {
-    "file": "assets/Profile-CTjfdyX-.js",
+    "file": "assets/Profile-BPIF36_k.js",
     "name": "Profile",
     "src": "resources/js/Pages/Admin/Profile.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_AdminLayout-C1FROgY9.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_AdminLayout-Cm6dNNWg.js"
+    ]
+  },
+  "resources/js/Pages/Admin/Progress.tsx": {
+    "file": "assets/Progress-B9r28Qi4.js",
+    "name": "Progress",
+    "src": "resources/js/Pages/Admin/Progress.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_StudentUI-DEf0CfPE.js",
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Admin/Quizzes.tsx": {
-    "file": "assets/Quizzes-etoKiPdz.js",
+    "file": "assets/Quizzes-DRqxIW_X.js",
     "name": "Quizzes",
     "src": "resources/js/Pages/Admin/Quizzes.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_AdminLayout-C1FROgY9.js",
-      "_AdminPremiumUI-BQ-zKzt3.js"
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Admin/Reports.tsx": {
-    "file": "assets/Reports-Gb3vQO5l.js",
+    "file": "assets/Reports-DPakY0Ks.js",
     "name": "Reports",
     "src": "resources/js/Pages/Admin/Reports.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_AdminLayout-C1FROgY9.js",
-      "_AdminPremiumUI-BQ-zKzt3.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Admin/Security.tsx": {
-    "file": "assets/Security-YpCnEHJ2.js",
+    "file": "assets/Security-DiCWLeno.js",
     "name": "Security",
     "src": "resources/js/Pages/Admin/Security.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_AdminLayout-C1FROgY9.js",
-      "_react-CHKftzr7.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_AdminLayout-Cm6dNNWg.js",
+      "_react-ClM8av3A.js"
     ]
   },
   "resources/js/Pages/Admin/Settings.tsx": {
-    "file": "assets/Settings-CVOSfZOO.js",
+    "file": "assets/Settings-B_yvfpo9.js",
     "name": "Settings",
     "src": "resources/js/Pages/Admin/Settings.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_AdminLayout-C1FROgY9.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_AdminLayout-Cm6dNNWg.js"
     ]
   },
   "resources/js/Pages/Admin/Students.tsx": {
-    "file": "assets/Students-B1i00goK.js",
+    "file": "assets/Students-hQZU-KgL.js",
     "name": "Students",
     "src": "resources/js/Pages/Admin/Students.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_AdminLayout-C1FROgY9.js",
-      "_AdminPremiumUI-BQ-zKzt3.js"
+      "_AdminLayout-Cm6dNNWg.js",
+      "_AdminPremiumUI-DPOr2Sa1.js"
     ]
   },
   "resources/js/Pages/Assignment.tsx": {
-    "file": "assets/Assignment-B3d4HoGd.js",
+    "file": "assets/Assignment-DpJIZPOQ.js",
     "name": "Assignment",
     "src": "resources/js/Pages/Assignment.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Assignments.tsx": {
-    "file": "assets/Assignments-BBJYbNTq.js",
+    "file": "assets/Assignments-DCiAQKQU.js",
     "name": "Assignments",
     "src": "resources/js/Pages/Assignments.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Auth/ForgotPassword.tsx": {
-    "file": "assets/ForgotPassword-DeWK89f8.js",
+    "file": "assets/ForgotPassword-COFFzhdL.js",
     "name": "ForgotPassword",
     "src": "resources/js/Pages/Auth/ForgotPassword.tsx",
     "isDynamicEntry": true,
@@ -256,7 +269,7 @@
     ]
   },
   "resources/js/Pages/Auth/Login.tsx": {
-    "file": "assets/Login-iEllApsi.js",
+    "file": "assets/Login-C1wJ7hJl.js",
     "name": "Login",
     "src": "resources/js/Pages/Auth/Login.tsx",
     "isDynamicEntry": true,
@@ -266,7 +279,7 @@
     ]
   },
   "resources/js/Pages/Auth/Register.tsx": {
-    "file": "assets/Register-ofNdEFEF.js",
+    "file": "assets/Register-zYT1XChI.js",
     "name": "Register",
     "src": "resources/js/Pages/Auth/Register.tsx",
     "isDynamicEntry": true,
@@ -275,7 +288,7 @@
     ]
   },
   "resources/js/Pages/Auth/ResetPassword.tsx": {
-    "file": "assets/ResetPassword-Cwi-G1cl.js",
+    "file": "assets/ResetPassword-hQelFWgM.js",
     "name": "ResetPassword",
     "src": "resources/js/Pages/Auth/ResetPassword.tsx",
     "isDynamicEntry": true,
@@ -284,7 +297,7 @@
     ]
   },
   "resources/js/Pages/Auth/TwoFactorChallenge.tsx": {
-    "file": "assets/TwoFactorChallenge-BYpc31ZM.js",
+    "file": "assets/TwoFactorChallenge-D2hZfPXN.js",
     "name": "TwoFactorChallenge",
     "src": "resources/js/Pages/Auth/TwoFactorChallenge.tsx",
     "isDynamicEntry": true,
@@ -293,7 +306,7 @@
     ]
   },
   "resources/js/Pages/Auth/VerifyEmail.tsx": {
-    "file": "assets/VerifyEmail-k6nLeygF.js",
+    "file": "assets/VerifyEmail-CS83Wg56.js",
     "name": "VerifyEmail",
     "src": "resources/js/Pages/Auth/VerifyEmail.tsx",
     "isDynamicEntry": true,
@@ -302,62 +315,62 @@
     ]
   },
   "resources/js/Pages/Chatbot.tsx": {
-    "file": "assets/Chatbot-rYKn42Mi.js",
+    "file": "assets/Chatbot-DSqeGcG1.js",
     "name": "Chatbot",
     "src": "resources/js/Pages/Chatbot.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Course.tsx": {
-    "file": "assets/Course-2MqMs8sI.js",
+    "file": "assets/Course-C9I2ryNm.js",
     "name": "Course",
     "src": "resources/js/Pages/Course.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/CourseLearn.tsx": {
-    "file": "assets/CourseLearn-C_KUdC3O.js",
+    "file": "assets/CourseLearn-CDtvuVHW.js",
     "name": "CourseLearn",
     "src": "resources/js/Pages/CourseLearn.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Courses.tsx": {
-    "file": "assets/Courses-CYdlD7-B.js",
+    "file": "assets/Courses-CmXyRpUm.js",
     "name": "Courses",
     "src": "resources/js/Pages/Courses.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Dashboard.tsx": {
-    "file": "assets/Dashboard-C6zRoLf4.js",
+    "file": "assets/Dashboard-DQr_tpiA.js",
     "name": "Dashboard",
     "src": "resources/js/Pages/Dashboard.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Home.tsx": {
-    "file": "assets/Home-C5vUB3KX.js",
+    "file": "assets/Home-CYoOJ5Bv.js",
     "name": "Home",
     "src": "resources/js/Pages/Home.tsx",
     "isDynamicEntry": true,
@@ -366,7 +379,7 @@
     ]
   },
   "resources/js/Pages/Onboarding.tsx": {
-    "file": "assets/Onboarding-BnKir7h0.js",
+    "file": "assets/Onboarding-DtpO1iBX.js",
     "name": "Onboarding",
     "src": "resources/js/Pages/Onboarding.tsx",
     "isDynamicEntry": true,
@@ -375,18 +388,18 @@
     ]
   },
   "resources/js/Pages/Payments.tsx": {
-    "file": "assets/Payments-BZ8bzFad.js",
+    "file": "assets/Payments-DHCfhTxn.js",
     "name": "Payments",
     "src": "resources/js/Pages/Payments.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Privacy.tsx": {
-    "file": "assets/Privacy-BTsPH_rd.js",
+    "file": "assets/Privacy-B2UocbM4.js",
     "name": "Privacy",
     "src": "resources/js/Pages/Privacy.tsx",
     "isDynamicEntry": true,
@@ -395,84 +408,95 @@
     ]
   },
   "resources/js/Pages/Profile.tsx": {
-    "file": "assets/Profile-D-fEFCIj.js",
+    "file": "assets/Profile-BhlL98aT.js",
     "name": "Profile",
     "src": "resources/js/Pages/Profile.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
+    ]
+  },
+  "resources/js/Pages/Progress.tsx": {
+    "file": "assets/Progress-DnnuQGp0.js",
+    "name": "Progress",
+    "src": "resources/js/Pages/Progress.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "resources/js/app.tsx",
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Quiz.tsx": {
-    "file": "assets/Quiz-DwPKBMGh.js",
+    "file": "assets/Quiz-33Wdz_Tw.js",
     "name": "Quiz",
     "src": "resources/js/Pages/Quiz.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/QuizAttempt.tsx": {
-    "file": "assets/QuizAttempt-Dr99fIhf.js",
+    "file": "assets/QuizAttempt-qj8XK-uN.js",
     "name": "QuizAttempt",
     "src": "resources/js/Pages/QuizAttempt.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js"
+      "_StudentUI-DEf0CfPE.js"
     ]
   },
   "resources/js/Pages/QuizResult.tsx": {
-    "file": "assets/QuizResult-Bp0r_oU8.js",
+    "file": "assets/QuizResult-8JaVa_aj.js",
     "name": "QuizResult",
     "src": "resources/js/Pages/QuizResult.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Quizzes.tsx": {
-    "file": "assets/Quizzes-txhJR4AS.js",
+    "file": "assets/Quizzes-Ceg2lHIb.js",
     "name": "Quizzes",
     "src": "resources/js/Pages/Quizzes.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Security.tsx": {
-    "file": "assets/Security-sa9LrBKU.js",
+    "file": "assets/Security-ITIpfFI8.js",
     "name": "Security",
     "src": "resources/js/Pages/Security.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js",
-      "_react-CHKftzr7.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js",
+      "_react-ClM8av3A.js"
     ]
   },
   "resources/js/Pages/Support.tsx": {
-    "file": "assets/Support-dso-wTUo.js",
+    "file": "assets/Support-B8AsoN5N.js",
     "name": "Support",
     "src": "resources/js/Pages/Support.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_StudentUI-BcVA6w7j.js",
-      "_StudentLayout-Dj0wFSg5.js"
+      "_StudentUI-DEf0CfPE.js",
+      "_StudentLayout-DKOjNlqY.js"
     ]
   },
   "resources/js/Pages/Terms.tsx": {
-    "file": "assets/Terms-DnL7NAh5.js",
+    "file": "assets/Terms-DZOAWsMc.js",
     "name": "Terms",
     "src": "resources/js/Pages/Terms.tsx",
     "isDynamicEntry": true,
@@ -481,7 +505,7 @@
     ]
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-BRARzYbE.js",
+    "file": "assets/app-DT72-wnj.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -495,6 +519,7 @@
       "resources/js/Pages/Admin/Enrollments.tsx",
       "resources/js/Pages/Admin/ModulesLessons.tsx",
       "resources/js/Pages/Admin/Profile.tsx",
+      "resources/js/Pages/Admin/Progress.tsx",
       "resources/js/Pages/Admin/Quizzes.tsx",
       "resources/js/Pages/Admin/Reports.tsx",
       "resources/js/Pages/Admin/Security.tsx",
@@ -518,6 +543,7 @@
       "resources/js/Pages/Payments.tsx",
       "resources/js/Pages/Privacy.tsx",
       "resources/js/Pages/Profile.tsx",
+      "resources/js/Pages/Progress.tsx",
       "resources/js/Pages/Quiz.tsx",
       "resources/js/Pages/QuizAttempt.tsx",
       "resources/js/Pages/QuizResult.tsx",
@@ -527,7 +553,7 @@
       "resources/js/Pages/Terms.tsx"
     ],
     "css": [
-      "assets/app-9EpDxKmT.css"
+      "assets/app-CiZAC1XX.css"
     ]
   }
 }

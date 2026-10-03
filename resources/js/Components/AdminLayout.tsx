@@ -32,11 +32,12 @@ const sections = [
             { label: 'Achievements', href: '/admin/achievements', icon: 'trophy' as const, enabled: true },
         ],
     },
-    {
+        {
         label: 'People',
         items: [
             { label: 'Students', href: '/admin/students', icon: 'user' as const, enabled: true },
             { label: 'Enrollments', href: '/admin/enrollments', icon: 'assignment' as const, enabled: true },
+            { label: 'Progress Tracking', href: '/admin/progress', icon: 'target' as const, enabled: true },
         ],
     },
     {
