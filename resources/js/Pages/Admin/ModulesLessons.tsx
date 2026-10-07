@@ -219,6 +219,25 @@ function materialPreviewKind(material: MaterialItem): 'video' | 'pdf' | 'image' 
     return null
 }
 
+function humanizeFilename(value: string): string {
+    const name = value
+        .split(/[?#]/)[0]                 // drop query/hash
+        .split(/[\\/]/).pop() ?? ''       // last path segment
+        .replace(/\.[a-z0-9]{1,8}$/i, '') // drop extension
+
+    const cleaned = name
+        .replace(/[-_]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+
+    if (!cleaned) return 'Untitled material'
+
+    return cleaned
+        .split(' ')
+        .map((w) => (w.length ? w[0].toUpperCase() + w.slice(1) : w))
+        .join(' ')
+}
+
 function paginationPages(current: number, last: number): (number | 'ellipsis')[] {
     if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1)
     const pages: (number | 'ellipsis')[] = [1]
@@ -414,25 +433,29 @@ export default function ModulesLessons({ admin, courses, selectedCourse, modules
         router.post(url, { direction }, { preserveScroll: true })
     }
 
-    const uploadMaterial = (event: FormEvent) => {
-        event.preventDefault()
+    // No FormEvent — the uploader is no longer inside a <form>.
+       // No FormEvent — the uploader is no longer inside a <form>.
+    // Title auto-derives from the filename/URL when left blank.
+    const uploadMaterial = () => {
         if (!editingLesson) return
         setMaterialError(null)
 
-        if (!materialTitle.trim()) {
-            setMaterialError('Give the material a title.')
-            return
-        }
-        if (!materialFile && !materialUrl.trim()) {
+        const file = materialFile
+        const url = materialUrl.trim()
+
+        if (!file && !url) {
             setMaterialError('Attach a file or provide a URL.')
             return
         }
 
+        const derivedSource = file?.name ?? url
+        const title = materialTitle.trim() || humanizeFilename(derivedSource)
+
         const formData = new FormData()
-        formData.append('title', materialTitle.trim())
+        formData.append('title', title)
         if (materialDescription.trim()) formData.append('description', materialDescription.trim())
-        if (materialFile) formData.append('file', materialFile)
-        else if (materialUrl.trim()) formData.append('url', materialUrl.trim())
+        if (file) formData.append('file', file)
+        else formData.append('url', url)
 
         setMaterialUploading(true)
         router.post(
@@ -953,13 +976,16 @@ export default function ModulesLessons({ admin, courses, selectedCourse, modules
                                     </p>
                                 )}
 
-                                <form onSubmit={uploadMaterial} className="mt-4 grid gap-3 sm:grid-cols-2">
+                                {/* NOT a <form> — must not nest inside the lesson <form>.
+                                    The outer form is only for saving the lesson; the upload
+                                    panel uses a plain div with a button that triggers the POST. */}
+                                <div className="mt-4 grid gap-3 sm:grid-cols-2">
                                     <label className="sm:col-span-2">
                                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Title</span>
                                         <input
                                             value={materialTitle}
                                             onChange={(e) => setMaterialTitle(e.target.value)}
-                                            placeholder="e.g. React Hooks Cheat Sheet"
+                                            placeholder="Leave blank to auto-generate from the file name"
                                             className={inputClass('mt-1.5')}
                                         />
                                     </label>
@@ -1003,7 +1029,8 @@ export default function ModulesLessons({ admin, courses, selectedCourse, modules
                                     )}
                                     <div className="sm:col-span-2 flex justify-end">
                                         <button
-                                            type="submit"
+                                            type="button"
+                                            onClick={uploadMaterial}
                                             disabled={materialUploading}
                                             className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#1554c0] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#10479f] disabled:cursor-wait disabled:opacity-60"
                                         >
@@ -1011,7 +1038,7 @@ export default function ModulesLessons({ admin, courses, selectedCourse, modules
                                             {materialUploading ? 'Uploading…' : 'Upload attachment'}
                                         </button>
                                     </div>
-                                </form>
+                                </div>
                             </div>
                         )}
                     </form>
