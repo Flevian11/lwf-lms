@@ -8,7 +8,9 @@ use App\Models\CourseModule;
 use App\Models\Lesson;
 use App\Models\LessonProgress;
 use App\Models\StudentLearningActivity;
+use App\Notifications\CourseCompletedNotification;
 use App\Services\AuditLogService;
+use App\Support\SendsNotificationsSafely;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +19,8 @@ use Inertia\Response;
 
 class AdminProgressController extends Controller
 {
+    use SendsNotificationsSafely;
+
     public function __construct(protected AuditLogService $auditLogService) {}
 
     /**
@@ -285,6 +289,14 @@ class AdminProgressController extends Controller
                 'status' => 'completed',
                 'completed_at' => now(),
             ]);
+
+            // Notify the student. Mail failure is non-fatal — the enrollment
+            // status flip above is already committed.
+            $this->safeNotify(
+                $enrollment->user,
+                new CourseCompletedNotification($enrollment->fresh(['course'])),
+                ['context' => 'course_completed', 'enrollment_id' => $enrollment->id],
+            );
         } elseif (! $fullyComplete && $enrollment->status === 'completed') {
             $enrollment->update([
                 'status' => 'active',

@@ -12,6 +12,7 @@ use App\Models\UserAchievement;
 class QuizCompletionRewardService
 {
     private const FIRST_QUIZ_POINTS = 10;
+    private const QUIZ_PASS_POINTS  = 20;
 
     /**
      * Award the first-quiz achievement exactly once.
@@ -118,5 +119,67 @@ class QuizCompletionRewardService
             'achievement_id' => $achievement->id,
             'points' => self::FIRST_QUIZ_POINTS,
         ];
+    }
+
+    /**
+     * Award points every time a student passes a quiz. Called once per
+     * attempt (from within the grading transaction), so each pass yields
+     * exactly one transaction row. The metadata check is defensive only.
+     */
+    public function awardQuizPassIfEligible(
+        User $user,
+        QuizAttempt $attempt,
+    ): array {
+        if (! $attempt->passed) {
+            return ['awarded' => false, 'points' => 0];
+        }
+
+        // Defensive idempotency. The caller grades each attempt exactly once,
+        // but this protects against future refactors.
+        $alreadyAwarded = PointTransaction::query()
+            ->where('user_id', $user->id)
+            ->where('quiz_id', $attempt->quiz_id)
+            ->where('type', 'quiz_passed')
+            ->get()
+            ->contains(fn ($tx) => (int) ($tx->metadata['attempt_id'] ?? 0) === (int) $attempt->id);
+
+        if ($alreadyAwarded) {
+            return ['awarded' => false, 'points' => 0];
+        }
+
+        PointTransaction::create([
+            'user_id' => $user->id,
+            'type' => 'quiz_passed',
+            'points' => self::QUIZ_PASS_POINTS,
+            'description' => 'Quiz passed: '.($attempt->quiz?->title ?? 'Quiz'),
+            'course_id' => $attempt->quiz?->course_id,
+            'assignment_id' => null,
+            'quiz_id' => $attempt->quiz_id,
+            'achievement_id' => null,
+            'metadata' => [
+                'attempt_id' => $attempt->id,
+                'score' => $attempt->score,
+                'max_score' => $attempt->max_score,
+                'percentage' => $attempt->percentage,
+            ],
+            'awarded_at' => now(),
+        ]);
+
+        StudentLearningActivity::create([
+            'user_id' => $user->id,
+            'course_id' => $attempt->quiz?->course_id,
+            'lesson_id' => $attempt->quiz?->lesson_id,
+            'assignment_id' => null,
+            'quiz_id' => $attempt->quiz_id,
+            'activity_type' => 'quiz_passed',
+            'points' => self::QUIZ_PASS_POINTS,
+            'metadata' => [
+                'attempt_id' => $attempt->id,
+                'percentage' => $attempt->percentage,
+            ],
+            'occurred_at' => now(),
+        ]);
+
+        return ['awarded' => true, 'points' => self::QUIZ_PASS_POINTS];
     }
 }

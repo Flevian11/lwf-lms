@@ -9,15 +9,20 @@ use App\Models\QuizOption;
 use App\Models\QuizQuestion;
 use App\Models\StudentLearningActivity;
 use App\Models\User;
+use App\Notifications\QuizCompletedNotification;
+use App\Support\SendsNotificationsSafely;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class QuizAttemptService
 {
+    use SendsNotificationsSafely;
+
     public function __construct(
         protected QuizCompletionRewardService $quizCompletionRewardService,
     ) {}
+
     public const VIOLATION_LIMIT = 3;
 
     /**
@@ -416,6 +421,19 @@ class QuizAttemptService
         $this->quizCompletionRewardService->awardFirstQuizIfEligible(
             $attempt->user,
             $attempt->fresh(['quiz']),
+        );
+
+        // Award points for every pass (not only the first).
+        $this->quizCompletionRewardService->awardQuizPassIfEligible(
+            $attempt->user,
+            $attempt->fresh(['quiz']),
+        );
+
+        // Notify the student. Mail failure is non-fatal — grading stays committed.
+        $this->safeNotify(
+            $attempt->user,
+            new QuizCompletedNotification($attempt->fresh(['quiz', 'user'])),
+            ['context' => 'quiz_graded', 'attempt_id' => $attempt->id],
         );
     }
 

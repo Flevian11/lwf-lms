@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\AssignmentSubmission;
+use App\Notifications\AssignmentGradedNotification;
+use App\Support\SendsNotificationsSafely;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Storage;
@@ -11,6 +13,8 @@ use InvalidArgumentException;
 
 class AssignmentGradingService
 {
+    use SendsNotificationsSafely;
+
     /**
      * Mark a submission and generate its student-facing PDF transcript.
      *
@@ -58,7 +62,17 @@ class AssignmentGradingService
             Storage::disk('local')->delete($oldTranscriptPath);
         }
 
-        return $submission->fresh();
+        $fresh = $submission->fresh(['assignment.course', 'user']);
+
+        // Notify the student. Mail failure is non-fatal — the grade is
+        // already committed and the transcript is already written.
+        $this->safeNotify(
+            $fresh->user,
+            new AssignmentGradedNotification($fresh),
+            ['context' => 'assignment_graded', 'submission_id' => $fresh->id],
+        );
+
+        return $fresh;
     }
 
     protected function renderTranscriptPdf(AssignmentSubmission $submission): string
