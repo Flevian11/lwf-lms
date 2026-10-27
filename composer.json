@@ -9,6 +9,8 @@
     ],
     "license": "MIT",
     "require": {
+        "php": "^8.3",
+        "chillerlan/php-qrcode": "5.0",
         "dompdf/dompdf": "^3.1",
         "guzzlehttp/guzzle": "7.15.3",
         "guzzlehttp/promises": "2.5.2",
@@ -20,7 +22,6 @@
         "laravel/socialite": "^5.30",
         "laravel/tinker": "^3.0",
         "matomo/device-detector": "*",
-        "php": "^8.3",
         "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
