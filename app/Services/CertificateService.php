@@ -320,7 +320,7 @@ body {
     left: 25mm;
     width: 247mm;
     text-align: center;
-    color: #98620c;
+    color: #805000;
     font-family: Montserrat, "DejaVu Sans", sans-serif;
     font-size: 9pt;
     font-weight: 700;
@@ -346,7 +346,7 @@ body {
     font-family: Montserrat, "DejaVu Sans", sans-serif;
     font-size: 8.5pt;
     letter-spacing: 2.6pt;
-    color: #5b667d;
+    color: #3f4d66;
 }
 
 /* Student name: artistic script */
@@ -450,7 +450,7 @@ body {
     font-family: Montserrat, "DejaVu Sans", sans-serif;
     font-size: 6.2pt;
     letter-spacing: 1.4pt;
-    color: #65738d;
+    color: #3f4d66;
     font-weight: bold;
     text-transform: uppercase;
     white-space: nowrap;
@@ -495,10 +495,10 @@ body {
     width: 105mm;
     text-align: center;
     font-family: Montserrat, "DejaVu Sans", sans-serif;
-    font-size: 5.5pt;
+    $16.5pt;
     line-height: 1.2;
-    letter-spacing: 1pt;
-    color: #52627e;
+    $10.5pt;
+    color: #374761;
 }
 
 /* The background already contains the gold seal artwork.
